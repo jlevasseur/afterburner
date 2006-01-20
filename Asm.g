@@ -44,19 +44,26 @@ asmStatements
 asmStatement
     : asmLabel
     | asmInstrCall
+    | asmCommand
     ;
 
 asmLabel: ID COLON;
 
+asmCommand: DOT ID asmCommandParams;
+
 asmInstrCall
     : asmMacro macroParams
     | asmInstr asmParams
+    | asmSensitiveInstr asmParams
     ;
 
 asmParams: (asmParam (COMMA asmParam)* )*
     ;
 
 macroParams: (macroParam (COMMA macroParam)* )*
+    ;
+
+asmCommandParams: (asmCommandParam (COMMA asmCommandParam)* )*
     ;
 
 asmParam
@@ -66,9 +73,15 @@ asmParam
 
 macroParam: String | asmParam;
 
+asmCommandParam: ID | Number | String;
+
 asmMacro: ID ;
 
-asmInstr: Iadd | Isub;
+asmInstr: Iadd | Isub
+    ;
+
+asmSensitiveInstr: Ipopf | Ipushf
+    ;
 
 {
     // Global stuff in the cpp file.
@@ -88,6 +101,7 @@ options {
 COMMA	: ',' ;
 SEMI	: ';' ;
 COLON	: ':' ;
+DOT	: '.' ;
 
 LPAREN		: '(' ;
 RPAREN		: ')' ;
@@ -122,8 +136,11 @@ protected ID options {testLiterals=true;}
 
 Reg: '%' ("eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp");
 
-Iadd: "add" ('l')?;
-Isub: "sub" ('l')?;
+Iadd	: "add" ('l')?;
+Isub	: "sub" ('l')?;
+
+Ipopf	: "popf";
+Ipushf	: "pushf";
 
 {
     // Global stuff in the cpp file.

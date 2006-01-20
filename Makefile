@@ -21,7 +21,8 @@ afterburner: AsmLexer.o AsmParser.o AsmTreeParser.o
 
 clean:
 	-rm -f *.class
-	-rm -f *TokenTypes.txt
+	-rm -f *TokenTypes.txt *TokenTypes.hpp
+	-rm -f *Parser.hpp *Parser.cpp *Lexer.hpp *Lexer.cpp
 	-rm -f *.o
 	-rm -f afterburner
 
@@ -29,6 +30,5 @@ clean:
 %Parser.cpp %Parser.hpp \
 %TreeParser.cpp %TreeParser.hpp \
 %ParserTokenTypes.hpp %ParserTokenTypes.txt: %.g
-#	java antlr.Tool $<
 	antlr $<
 
