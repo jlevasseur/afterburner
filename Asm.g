@@ -27,7 +27,7 @@ options {
 
 class AsmParser extends Parser;
 options {
-    buildAST = true;
+//    buildAST = true;
     k = 2;
 }
 {
@@ -38,7 +38,7 @@ options {
 asmFile: (asmStatements)? ;	// Empty files permitted.
 
 asmStatements
-    : asmStatement (SEMI | Newline)
+    : (asmStatement)? (SEMI | Newline)+
     ;
 
 asmStatement
@@ -49,38 +49,66 @@ asmStatement
 
 asmLabel: ID COLON;
 
-asmCommand: DOT ID asmCommandParams;
+asmCommand
+    : Command asmCommandParams
+    | Cmacro asmCommandParams
+    | Cendm asmCommandParams
+    ;
 
 asmInstrCall
-    : asmMacro macroParams
-    | asmInstr asmParams
-    | asmSensitiveInstr asmParams
+    : asmInvoke macroParams
+    | asmSensitive
     ;
 
-asmParams: (asmParam (COMMA asmParam)* )*
-    ;
+asmInvoke: ID ;
 
-macroParams: (macroParam (COMMA macroParam)* )*
-    ;
+asmParams: (asmParam (COMMA asmParam)* )* ;
+macroParams: (macroParam (COMMA macroParam)* )* ;
+asmCommandParams: (asmCommandParam (COMMA asmCommandParam)* )* ;
 
-asmCommandParams: (asmCommandParam (COMMA asmCommandParam)* )*
-    ;
+macroParam: String | asmParam;
+asmCommandParam: ID | Number | String;
 
 asmParam
     : ID
     | Number
     ;
 
-macroParam: String | asmParam;
 
-asmCommandParam: ID | Number | String;
+asmSensitive {int pad;}
+    : pad = asmSensitiveInstr asmParams { std::cout << pad; };
 
-asmMacro: ID ;
-
-asmInstr: Iadd | Isub
+asmSensitiveRegInstr returns [int pad] {pad=0;}
+    : Ipop	{pad=5;}
+    | Ipush	{pad=5;}
     ;
 
-asmSensitiveInstr: Ipopf | Ipushf
+asmSensitiveInstr returns [int pad] {pad=0;}
+    : Ipopf	{pad=21;}
+    | Ipushf	{pad=5;}
+    | Ilgdt	{pad=9;}
+    | Isgdt	{pad=8;}
+    | Ilidt	{pad=9;}
+    | Isidt	{pad=8;}
+    | Iljmp	{pad=9;}
+    | (Ilds | Iles | Ilfs | Ilgs | Ilss)	{pad=16;}
+    | Iclts	{pad=14;}
+    | Ihlt	{pad=6;}
+    | Icli	{pad=7;}
+    | Isti	{pad=23;}
+    | Illdt	{pad=16;}
+    | Isldt	{pad=6;}
+    | Iltr	{pad=16;}
+    | Istr	{pad=9;}
+    | Iin	{pad=13;}
+    | Iout	{pad=16;}
+    | Iinvlpg	{pad=6;}
+    | Iiret	{pad=4;}
+    | Ilret	{pad=4;}
+    | Icpuid	{pad=6;}
+    | Iwrmsr	{pad=8;}
+    | Irdmsr	{pad=8;}
+    | Iint	{pad=11;}
     ;
 
 {
@@ -89,7 +117,7 @@ asmSensitiveInstr: Ipopf | Ipushf
 
 class AsmLexer extends Lexer;
 options {
-    k = 3;
+    k = 5;
     caseSensitive = false;
     testLiterals = false;
 }
@@ -115,7 +143,10 @@ Newline
     | '\n'	{ newline(); } // Sane systems
     ;
 
-protected String: '"' ( ~('"') )* '"' ;
+Whitespace
+    : (' ' | '\t' | '\014')
+	{ _ttype = ANTLR_USE_NAMESPACE(antlr)Token::SKIP; }
+    ;
 
 Comment
     : ((CCommentBegin) => CComment | CPPComment)
@@ -124,24 +155,64 @@ Comment
 protected CCommentBegin : '/''*';
 protected CCommentEnd   : '*''/' ;
 protected CComment
-    : CCommentBegin (options {greedy=false;} :.)* CCommentEnd ;
+    : CCommentBegin (options {greedy=false;}
+                     : '\n' { newline(); } | ~('\n') )* 
+      CCommentEnd ;
 protected CPPComment: '/''/' ( ~('\n') )* ;	// Don't swallow the newline.
 
 protected Letter : 'a'..'z' | '_';
 protected Digit  : '0'..'9';
-protected Int    : (Digit)+;
+
+Int    : (Digit)+;
+String : '"' ( ~('"') )* '"' ;
+
 protected ID options {testLiterals=true;}
     : Letter (Letter | Digit)*
     ;
 
+protected Command options {testLiterals=true;}
+    : DOT ID
+    ;
+
 Reg: '%' ("eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp");
 
-Iadd	: "add" ('l')?;
-Isub	: "sub" ('l')?;
+Cmacro	: ".macro";
+Cendm	: ".endm";
 
-Ipopf	: "popf";
-Ipushf	: "pushf";
+Ipushf	: "pushf" ('l' | 'd');
+Ipopf	: "popf"  ('l' | 'd');
+Ilgdt	: "lgdt" ('l')? ;
+Isgdt	: "sgdt" ('l')? ; 
+Ilidt	: "lidt" ('l')? ;
+Isidt	: "sidt" ('l')? ;
+Iljmp	: "ljmp";
+Ilds	: "lds";
+Iles	: "les";
+Ilfs	: "lfs";
+Ilgs	: "lgs";
+Ilss	: "lss";
+Iclts	: "clts";
+Ihlt	: "hlt";
+Icli	: "cli";
+Isti	: "sti";
+Illdt	: "lldt";
+Isldt	: "sldt" ('l')? ;
+Iltr	: "ltr";
+Istr	: "str" ('l')? ;
+Iin	: "in"  ('b' | 'w' | 'l');
+Iout	: "out" ('b' | 'w' | 'l');
+Iinvlpg	: "invlpg";
+Iiret	: "iret" ('l' | 'd')? ;
+Ilret	: "lret";
+Icpuid	: "cpuid";
+Iwrmsr	: "wrmsr";
+Irdmsr	: "rdmsr";
+Iint	: "int";
+Ipush	: "push" ('l')? ;
+Ipop	: "pop"  ('l')? ;
 
+
+/*
 {
     // Global stuff in the cpp file.
 }
@@ -155,4 +226,4 @@ options {
 }
 
 asmFile: ;
-
+*/

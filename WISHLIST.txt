@@ -1,0 +1,14 @@
+
+Aspect programming:
+  - Add code to be executed at key junctions of C output, such as checking
+    for interrupts when returning to guest.
+  - For boundary functions, prepend assembler, and insert assembler immediately
+    before the ret instruction, to impedance match the
+    C calling conventions; thus we needn't use hand-written trampolines, and
+    we can remove this code from the inline points.
+  - Also prepend instructions to prepare the boundary-point parameters, i.e.,
+    the burn registers stack frame.
+  - Remove function prologs and epilogs to create our own empty functions,
+    where the C calling convention needn't be obeyed.
+  - How to associate functions with the code weaving?  Perhaps by function
+    name.

@@ -12,12 +12,19 @@ antlr_lib     ?= $(antlr_root)/lib
 #export CLASSPATH PATH
 
 CPPFLAGS  += -Wall -O2 -I$(antlr_include)
-LDFLAGs += -L$(antlr_lib)
+LDFLAGS += -L$(antlr_lib)
 LIBS    += -lantlr
 
 all: afterburner
 
-afterburner: AsmLexer.o AsmParser.o AsmTreeParser.o
+afterburner: afterburner.o AsmLexer.o AsmParser.o
+	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+afterburner.o: AsmLexer.hpp AsmParser.hpp
+AsmParser.o: AsmParser.hpp
+
+AsmParser.cpp AsmParser.hpp: Asm.g
+AsmLexer.hpp: Asm.g
 
 clean:
 	-rm -f *.class
@@ -26,7 +33,7 @@ clean:
 	-rm -f *.o
 	-rm -f afterburner
 
-%Lexer.cpp %Lexer.hpp \
+%Lexer.hpp \
 %Parser.cpp %Parser.hpp \
 %TreeParser.cpp %TreeParser.hpp \
 %ParserTokenTypes.hpp %ParserTokenTypes.txt: %.g
