@@ -26,6 +26,9 @@ AsmParser.o: AsmParser.hpp
 AsmParser.cpp AsmParser.hpp: Asm.g
 AsmLexer.hpp: Asm.g
 
+afterburner.i: afterburner.cpp
+	g++ -g $(CPPFLAGS) -S $< -o $@
+
 clean:
 	-rm -f *.class
 	-rm -f *TokenTypes.txt *TokenTypes.hpp
