@@ -1,3 +1,4 @@
+/* tutorial: http://javadude.com/articles/antlrtut/ */
 
 header "pre_include_hpp" {
     // Inserted before antlr generated includes in the header file.
@@ -28,7 +29,7 @@ options {
 class AsmParser extends Parser;
 options {
 //    buildAST = true;
-    k = 2;
+    k = 3;
 }
 {
     // Additional methods and members.
@@ -43,104 +44,129 @@ asmStatementList: (asmCompleteStatement)+ ;
 asmEnd: Newline | SEMI ;
 
 asmCompleteStatement
-    : (asmLabel) => asmLabel (asmInstr)? asmEnd	{ std::cerr << "label\n"; }
-    | asmInstr asmEnd				{ std::cerr << "instr\n"; }
-    | asmCommand asmEnd				{ std::cerr << "command\n"; }
-    | asmEnd					{ std::cerr << "empty\n"; }
+    : (asmLabel) => asmLabel (asmInstr)? asmEnd
+    | asmInstrPrefix asmEnd
+    | asmInstr asmEnd
+    | asmCommand asmEnd
+    | asmEnd
     ;
 
-asmLabel
-    : ID COLON
-    | DOT ID COLON
-    ;
+asmLabel : Label | LocalLabel ;
 
 asmCommand
     : ".macro" ID everythingElse
     | ".endm" 
-    | DOT ID everythingElse
+    | Command everythingElse
     ;
 
 asmInstr
-    : asmInnocuousInstr everythingElse
-    | asmSensitive everythingElse
+    : asmInnocuousInstr everythingElse		{ std::cerr << "innocuous\n"; }
+    | asmSensitive
     ;
 
-everythingElse: (param (COMMA param)* )* ;
+everythingElse: (param | COMMA)* ;
+param: String | ID | Int | asmReg | Option | Command | DOLLAR | PLUS | MINUS | STAR | DOT | LPAREN | RPAREN;
 
-param: String | ID | Number | Reg;
+regOffsetExpression
+    : expression (LPAREN ((Int)? COMMA)? asmReg (COMMA (Int)?)? RPAREN)*
+    | LPAREN asmReg RPAREN
+    | asmReg
+    ;
 
+primitive
+    : ID | Int | DOT | Command
+    ;
+
+signExpression
+    : ((PLUS|MINUS))* primitive
+    ;
+makeConstantExpression
+    : (DOLLAR)? signExpression
+    ;
+multiplyingExpression
+    : makeConstantExpression ((STAR|DIV|"mod") makeConstantExpression)*
+    ;
+addingExpression
+    : multiplyingExpression ((PLUS|MINUS) multiplyingExpression)*
+    ;
+
+expression : addingExpression ;
+instrParam : regOffsetExpression ;
 
 asmSensitive {int pad;}
-    : pad = asmSensitiveInstr
-    | pad = asmSensitiveRegInstr
+    : pad = asmSensitiveInstr everythingElse	{ std::cerr << "sensitive\n"; }
+    | pad = asmSensitiveRegInstr		{ if(pad) std::cerr << "sensitive reg\n"; else std::cerr << "innocuous\n"; }
     ;
 
 asmInnocuousInstr
-    : i:ID				{ std::cout << i->getText(); }
+    : ID
+    ;
+
+asmLowReg: "%al" | "%bl" | "%cl" | "%dl";
+asmHighReg: "%ah" | "%bh" | "%ch" | "%dh";
+asmReg
+    : "%eax" | "%ebx" | "%ecx" | "%edx" | "%esi" | "%edi" | "%esp" | "%ebp"
+    | asmLowReg
+    | asmHighReg
+    ;
+asmSensitiveReg
+    : "%cs" | "%ds" | "%es" | "%fs" | "%gs" 
+    | "%cr0" | "%cr2" | "%cr3" | "%cr4" 
+    | "%db0" | "%db1" | "%db2" | "%db3" | "%db4" | "%db5" | "%db6" | "%db7"
+    ;
+
+asmInstrPrefix
+    : "lock"
+    | "rep"
     ;
 
 asmSensitiveRegInstr returns [int pad] {pad=0;}
-    : ("pop"  | "popl"  | "popd")	{pad=5;}
-    | ("push" | "pushl" | "pushd")	{pad=5;}
+    : ("pop"  | "popl"  | "popd")  (asmSensitiveReg {pad=5;} | instrParam)
+    | ("push" | "pushl" | "pushd") (asmSensitiveReg {pad=5;} | instrParam)
+    | ("mov"  | "movl" )
+        (
+	  (instrParam COMMA asmSensitiveReg) => (instrParam COMMA asmSensitiveReg {pad=12;})
+        | (asmSensitiveReg COMMA instrParam {pad=12;}) 
+	| (instrParam COMMA instrParam)
+	)
     ;
 
-asmSensitiveInstr returns [int pad] {pad=0;}
+asmSensitiveInstr returns [int pad] {pad=8;}
     : ("popf"  | "popfl"  | "popfd")	{pad=21;}
     | ("pushf" | "pushfl" | "pushfd")	{pad=5;}
-    | lgdt	{pad=9;}
-    | sgdt	{pad=8;}
-    | lidt	{pad=9;}
-    | sidt	{pad=8;}
-    | ljmp	{pad=9;}
-    | (lds | les | lfs | lgs | lss)	{pad=16;}
-    | clts	{pad=14;}
-    | hlt	{pad=6;}
-    | cli	{pad=7;}
-    | sti	{pad=23;}
-    | lldt	{pad=16;}
-    | sldt	{pad=6;}
-    | ltr	{pad=16;}
-    | str	{pad=9;}
-    | in	{pad=13;}
-    | out	{pad=16;}
-    | invlpg	{pad=6;}
-    | iret	{pad=4;}
-    | lret	{pad=4;}
-    | cpuid	{pad=6;}
-    | wrmsr	{pad=8;}
-    | rdmsr	{pad=8;}
-    | softint	{pad=11;}
+    | ("lgdt" | "lgdtl")		{pad=9;}
+    | ("sgdt" | "sgdtl")
+    | ("lidt" | "lidtl")		{pad=9;}
+    | ("sidt" | "sidtl")
+    | "ljmp"				{pad=9;}
+    | ("lds" | "les" | "lfs" | "lgs" | "lss")	{pad=16;}
+    | "clts"				{pad=14;}
+    | "hlt"				{pad=6;}
+    | "cli"				{pad=7;}
+    | "sti"				{pad=23;}
+    | "lldt"				{pad=16;}
+    | ("sldt" | "sldtl")		{pad=6;}
+    | "ltr"				{pad=16;}
+    | ("str" | "strl")			{pad=9;}
+    | ("inb"  | "inw"  | "inl")		{pad=13;}
+    | ("outb" | "outw" | "outl" )	{pad=16;}
+    | "invlpg"				{pad=6;}
+    | ("iret" | "iretl" | "iretd")	{pad=4;}
+    | "lret"				{pad=4;}
+    | "cpuid"				{pad=6;}
+    | "wrmsr"
+    | "rdmsr"
+    | "int"				{pad=11;}
+    | "ud2"
+    | "invd"
+    | "wbinvd"
+    | ("smsw" | "smswl")
+    | "lmsw"
+    | "arpl"
+    | "lar"
+    | "lsl"
+    | "rsm"
     ;
-
-lgdt	: "lgdt" | "lgdtl";
-sgdt	: "sgdt" | "sgdtl";
-lidt	: "lidt" | "lidtl";
-sidt	: "sidt" | "sidtl";
-ljmp	: "ljmp";
-lds	: "lds";
-les	: "les";
-lfs	: "lfs";
-lgs	: "lgs";
-lss	: "lss";
-clts	: "clts";
-hlt	: "hlt";
-cli	: "cli";
-sti	: "sti";
-lldt	: "lldt";
-sldt	: "sldt" | "sldtl";
-ltr	: "ltr";
-str	: "str" | "strl";
-in	: "inb" | "inw" | "inl";
-out	: "outb" | "outw" | "outl";
-invlpg	: "invlpg";
-iret	: "iret" | "iretl" | "iretd";
-lret	: "lret";
-cpuid	: "cpuid";
-wrmsr	: "wrmsr";
-rdmsr	: "rdmsr";
-softint	: "int";
-push	: "push" | "pushl";
-pop	: "pop"  | "popl";
 
 {
     // Global stuff in the cpp file.
@@ -151,7 +177,10 @@ options {
     k = 3;
     caseSensitive = true;
     testLiterals = false;
+    // Specify the vocabulary, to support inversions in a scanner rule.
+    charVocabulary = '\u0000'..'\u00FF';
 }
+
 {
     // Additional methods and members.
 }
@@ -159,8 +188,10 @@ options {
 // Rules
 COMMA	: ',' ;
 SEMI	: ';' ;
-COLON	: ':' ;
-DOT	: '.' ;
+DOT     : '.' ;
+protected COLON   : ':' ;
+protected PERCENT : '%' ;
+protected AT      : '@' ;
 
 LPAREN		: '(' ;
 RPAREN		: ')' ;
@@ -168,6 +199,12 @@ LBRACKET	: '[' ;
 RBRACKET	: ']' ;
 LCURLY		: '{' ;
 RCURLY		: '}' ;
+
+PLUS		: '+' ;
+MINUS		: '-' ;
+DOLLAR		: '$' ;
+STAR		: '*' ;
+DIV		: '/' ;
 
 Newline
     : '\r' '\n'	{ newline(); } // DOS
@@ -194,13 +231,27 @@ protected CPPComment: '/''/' ( ~('\n') )* ;	// Don't swallow the newline.
 protected Letter : 'a'..'z' | 'A'..'Z' | '_';
 protected Digit  : '0'..'9';
 
-Int    : (Digit)+;
+protected Name   : Letter (Letter | Digit)* ;
+Int    : (Digit)+ ;
 String : '"' ( ~('"') )* '"' ;
 
-ID options {testLiterals=true;} : Letter (Letter | Digit)* ;
+// Note: For all literals that we wish to lookup in the hash table, there
+// must be a Lexer rule that can match it, with the testLiterals option
+// enabled.
 
-Reg: '%' ("eax" | "ebx" | "ecx" | "edx" | "esi" | "edi" | "esp");
+// Note: We use left factoring for picking out labels amongst the 
+// IDs and commands.
+ID options {testLiterals=true;}
+    : Name (COLON {$setType(Label);})? ;
 
+Command options {testLiterals=true;}
+    : DOT Name (COLON {$setType(LocalLabel);})? ;
+
+Reg options {testLiterals=true;}
+    : PERCENT Name ;
+
+Option options {testLiterals=true;}
+    : AT Name ;
 
 /*
 {

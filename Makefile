@@ -26,6 +26,12 @@ AsmParser.o: AsmParser.hpp
 AsmParser.cpp AsmParser.hpp: Asm.g
 AsmLexer.hpp: Asm.g
 
+afterfilter: afterfilter.o AsmFilterLexer.o
+	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+
+afterfilter.o: AsmFilterLexer.hpp
+AsmFilterLexer.hpp: AsmFilter.g
+
 afterburner.i: afterburner.cpp
 	g++ -g $(CPPFLAGS) -S $< -o $@
 
