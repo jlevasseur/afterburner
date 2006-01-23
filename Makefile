@@ -22,6 +22,7 @@ afterburner: afterburner.o AsmLexer.o AsmParser.o
 
 afterburner.o: AsmLexer.hpp AsmParser.hpp
 AsmParser.o: AsmParser.hpp
+AsmLexer.o: AsmLexer.hpp
 
 AsmParser.cpp AsmParser.hpp: Asm.g
 AsmLexer.hpp: Asm.g
@@ -33,7 +34,7 @@ afterfilter.o: AsmFilterLexer.hpp
 AsmFilterLexer.hpp: AsmFilter.g
 
 afterburner.i: afterburner.cpp
-	g++ -g $(CPPFLAGS) -S $< -o $@
+	g++ $(CPPFLAGS) -S $< -o $@
 
 clean:
 	-rm -f *.class

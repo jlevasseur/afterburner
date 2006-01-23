@@ -1,21 +1,36 @@
 
 #include <iostream>
+#include <fstream>
 
 #include "AsmLexer.hpp"
 #include "AsmParser.hpp"
 #include <antlr/TokenBuffer.hpp>
 
-int main( int, char** )
+int main( int argc, char *argv[] )
 {
     ANTLR_USING_NAMESPACE(std);
     ANTLR_USING_NAMESPACE(antlr);
     ANTLR_USING_NAMESPACE(Asm);
 
+    if( argc < 2 )
+	exit( 0 );
     try {
-	AsmLexer lexer(cin);
+        ifstream input( argv[1] );
+	AsmLexer lexer(input);
 	TokenBuffer buffer(lexer);
 	AsmParser parser(buffer);
+
+	ASTFactory ast_factory;
+	parser.initializeASTFactory( ast_factory );
+	parser.setASTFactory( &ast_factory );
+
 	parser.asmFile();
+
+	RefAST a = parser.getAST();
+	cout << "List:" << endl;
+	cout << a->toStringList() << endl;
+	cout << "Tree:" << endl;
+	cout << a->toStringTree() << endl;
     }
     catch( ANTLRException& e )
     {

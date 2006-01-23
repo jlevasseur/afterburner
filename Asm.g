@@ -28,24 +28,31 @@ options {
 
 class AsmParser extends Parser;
 options {
-//    buildAST = true;
-    k = 3;
+    buildAST = true;
+    k = 2;
 }
 {
     // Additional methods and members.
 }
 
 // Rules
-asmFile: (asmStatementList)?	// Empty files permitted.
-	{ std::cerr << "finished parsing file\n"; }
+asmFile: asmBlocks
     ;
-asmStatementList: (asmCompleteStatement)+ ;
+
+asmBlocks: (asmAnonymousBlock)? (asmBasicBlock)* ;
+
+asmAnonymousBlock: (asmStatement)+
+    { ## = #([ASTBasicBlock], ##); }
+    ;
+
+asmBasicBlock: asmLabel (asmStatement)+ 
+    { ## = #([ASTBasicBlock], ##); }
+    ;
 
 asmEnd: Newline | SEMI ;
 
-asmCompleteStatement
-    : (asmLabel) => asmLabel (asmInstr)? asmEnd
-    | asmInstrPrefix asmEnd
+asmStatement
+    : asmInstrPrefix asmEnd
     | asmInstr asmEnd
     | asmCommand asmEnd
     | asmEnd
@@ -53,15 +60,21 @@ asmCompleteStatement
 
 asmLabel : Label | LocalLabel ;
 
+asmMacroDef
+    : ".macro" ID (ID (COMMA ID)*)? asmEnd
+               asmBlocks
+      ".endm"
+      { ## = #([ASTMacroDef], ##); }
+    ;
+
 asmCommand
-    : ".macro" ID everythingElse
-    | ".endm" 
-    | Command everythingElse
+    : asmMacroDef
+    | Command everythingElse		{ ## = #([ASTCommand], ##); }
     ;
 
 asmInstr
-    : asmInnocuousInstr everythingElse		{ std::cerr << "innocuous\n"; }
-    | asmSensitive
+    : asmInnocuousInstr everythingElse	{ ## = #([ASTInstruction], ##); }
+    | asmSensitive			{ ## = #([ASTSensitive], ##); }
     ;
 
 everythingElse: (param | COMMA)* ;
@@ -94,8 +107,8 @@ expression : addingExpression ;
 instrParam : regOffsetExpression ;
 
 asmSensitive {int pad;}
-    : pad = asmSensitiveInstr everythingElse	{ std::cerr << "sensitive\n"; }
-    | pad = asmSensitiveRegInstr		{ if(pad) std::cerr << "sensitive reg\n"; else std::cerr << "innocuous\n"; }
+    : pad = asmSensitiveInstr everythingElse
+    | pad = asmSensitiveRegInstr
     ;
 
 asmInnocuousInstr
@@ -116,8 +129,7 @@ asmSensitiveReg
     ;
 
 asmInstrPrefix
-    : "lock"
-    | "rep"
+    : ("lock" | "rep")		{ ## = #([ASTInstructionPrefix], ##); }
     ;
 
 asmSensitiveRegInstr returns [int pad] {pad=0;}
@@ -167,6 +179,16 @@ asmSensitiveInstr returns [int pad] {pad=8;}
     | "lsl"
     | "rsm"
     ;
+
+astDefs
+    : ASTMacroDef
+    | ASTInstruction
+    | ASTInstructionPrefix
+    | ASTSensitive
+    | ASTBasicBlock
+    | ASTCommand
+    ;
+
 
 {
     // Global stuff in the cpp file.
@@ -232,7 +254,6 @@ protected Letter : 'a'..'z' | 'A'..'Z' | '_';
 protected Digit  : '0'..'9';
 
 protected Name   : Letter (Letter | Digit)* ;
-Int    : (Digit)+ ;
 String : '"' ( ~('"') )* '"' ;
 
 // Note: For all literals that we wish to lookup in the hash table, there
@@ -243,6 +264,9 @@ String : '"' ( ~('"') )* '"' ;
 // IDs and commands.
 ID options {testLiterals=true;}
     : Name (COLON {$setType(Label);})? ;
+
+Int
+    : (Digit)+ (COLON {$setType(Label);})? ;
 
 Command options {testLiterals=true;}
     : DOT Name (COLON {$setType(LocalLabel);})? ;
