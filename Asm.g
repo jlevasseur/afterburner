@@ -349,14 +349,17 @@ asmInstrPrefix
 
 asmInstr
     : #( ASTInstruction i:ID	{std::cout << '\t' << i->getText();}
-         instrParams )
-    | #( ASTSensitive asmSensitiveInstr instrParams )
+         (instrParams)? )
+    | #( ASTSensitive asmSensitiveInstr (instrParams)? )
     ;
 
 commandParams: (commandParam)* ;
 commandParam: String | Option | instrParam;
 
-instrParams: (instrParam)* ;
+instrParams
+    : { std::cout << '\t'; } instrParam 
+      ({ std::cout << ',' << ' '; } instrParam)*
+    ;
 instrParam: regOffsetExpression;
 
 regOffsetExpression
@@ -384,11 +387,11 @@ expr
     | primitive
     ;
 
-asmLowReg
-    : a:"%al" 		{ crap(a); }
-    | b:"%bl" 		{ crap(b); }
-    | c:"%cl" 		{ crap(c); }
-    | d:"%dl"		{ crap(d); }
+asmLowReg returns [antlr::RefAST r]
+    : {r=_t;} "%al"
+    | {r=_t;} "%bl"
+    | {r=_t;} "%cl"
+    | {r=_t;} "%dl"
     ;
 asmHighReg returns [antlr::RefAST r]
     : {r=_t;} "%ah"
@@ -396,36 +399,42 @@ asmHighReg returns [antlr::RefAST r]
     | {r=_t;} "%ch"
     | {r=_t;} "%dh"
     ;
-asmReg returns [antlr::RefAST r]
-    : a:"%eax" 		{ crap(a); }
-    | b:"%ebx" 		{ crap(b); }
-    | c:"%ecx" 		{ crap(c); }
-    | d:"%edx" 		{ crap(d); }
-    | si:"%esi" 	{ crap(si); }
-    | di:"%edi" 	{ crap(di); }
-    | sp:"%esp" 	{ crap(sp); }
-    | bp:"%ebp"		{ crap(bp); }
-    | asmLowReg
-    | r=asmHighReg { crap(r); }
+asmNormalReg returns [antlr::RefAST r]
+    : {r=_t;} "%eax"
+    | {r=_t;} "%ebx"
+    | {r=_t;} "%ecx"
+    | {r=_t;} "%edx"
+    | {r=_t;} "%esi"
+    | {r=_t;} "%edi"
+    | {r=_t;} "%esp"
+    | {r=_t;} "%ebp"
     ;
-asmSensitiveReg
-    : c:"%cs" 		{ crap(c); }
-    | d:"%ds" 		{ crap(d); }
-    | e:"%es" 		{ crap(e); }
-    | f:"%fs" 		{ crap(f); }
-    | g:"%gs" 		{ crap(g); }
-    | c0:"%cr0" 	{ crap(c0); }
-    | c2:"%cr2" 	{ crap(c2); }
-    | c3:"%cr3" 	{ crap(c3); }
-    | c4:"%cr4" 	{ crap(c4); }
-    | d0:"%db0" 	{ crap(d0); }
-    | d1:"%db1" 	{ crap(d1); }
-    | d2:"%db2" 	{ crap(d2); }
-    | d3:"%db3" 	{ crap(d3); }
-    | d4:"%db4" 	{ crap(d4); }
-    | d5:"%db5" 	{ crap(d5); }
-    | d6:"%db6" 	{ crap(d6); }
-    | d7:"%db7"		{ crap(d7); }
+
+asmReg { antlr::RefAST n; }
+    : n=asmNormalReg	{ std::cout << n->getText(); }
+    | n=asmLowReg	{ std::cout << n->getText(); }
+    | n=asmHighReg	{ std::cout << n->getText(); }
+    | n=asmSensitiveReg	{ std::cout << n->getText(); }
+    ;
+
+asmSensitiveReg returns [antlr::RefAST r]
+    : {r=_t;} "%cs"
+    | {r=_t;} "%ds"
+    | {r=_t;} "%es"
+    | {r=_t;} "%fs"
+    | {r=_t;} "%gs"
+    | {r=_t;} "%cr0"
+    | {r=_t;} "%cr2"
+    | {r=_t;} "%cr3"
+    | {r=_t;} "%cr4"
+    | {r=_t;} "%db0"
+    | {r=_t;} "%db1"
+    | {r=_t;} "%db2"
+    | {r=_t;} "%db3"
+    | {r=_t;} "%db4"
+    | {r=_t;} "%db5"
+    | {r=_t;} "%db6"
+    | {r=_t;} "%db7"
     ;
 
 asmSensitiveInstr returns [int pad] {pad=8;}
