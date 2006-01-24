@@ -85,10 +85,10 @@ asmInstr
       { ## = #([ASTSensitive, "sensitive instruction"], ##); }
     ;
 
-commandParams: (commandParam (COMMA! commandParam)* )?;
+commandParams: (commandParam)? (COMMA! commandParam)* ;
 commandParam: String | Option | instrParam;
 
-instrParams: (instrParam (COMMA! instrParam)* )?;
+instrParams: (instrParam)? (COMMA! instrParam)* ;
 instrParam: regOffsetExpression;
 
 regOffsetExpression
@@ -299,6 +299,8 @@ options {
     k = 2;
 }
 {
+    int pad;
+
     // Additional methods and members.
     void crap( antlr::RefAST a )
         { std::cout << a->getText(); }
@@ -326,7 +328,7 @@ asmStatement
 asmCommand
     : asmMacroDef
     | #(ASTCommand c:Command	{ std::cout << '\t' << c->getText(); }
-        commandParams
+        (commandParams)?
        )
     ;
 
@@ -347,14 +349,23 @@ asmInstrPrefix
     : #( ASMInstructionPrefix i:ID	{std::cout << i->getText();}
        );
 
-asmInstr
+asmInstr {antlr::RefAST r;}
     : #( ASTInstruction i:ID	{std::cout << '\t' << i->getText();}
          (instrParams)? )
-    | #( ASTSensitive asmSensitiveInstr (instrParams)? )
+    | #( ASTSensitive r=asmSensitiveInstr  
+                        {if( r ) std::cout << '\t' << r->getText();}
+         (instrParams)? )
     ;
 
-commandParams: (commandParam)* ;
-commandParam: String | Option | instrParam;
+commandParams
+    : { std::cout << '\t'; } commandParam
+      ({ std::cout << ',' << ' '; } commandParam)*
+    ;
+commandParam
+    : s:String		{ crap(s); }
+    | o:Option 		{ crap(o); }
+    | instrParam
+    ;
 
 instrParams
     : { std::cout << '\t'; } instrParam 
@@ -387,19 +398,19 @@ expr
     | primitive
     ;
 
-asmLowReg returns [antlr::RefAST r]
+asmLowReg returns [antlr::RefAST r] { r=NULL; }
     : {r=_t;} "%al"
     | {r=_t;} "%bl"
     | {r=_t;} "%cl"
     | {r=_t;} "%dl"
     ;
-asmHighReg returns [antlr::RefAST r]
+asmHighReg returns [antlr::RefAST r] { r=NULL; }
     : {r=_t;} "%ah"
     | {r=_t;} "%bh"
     | {r=_t;} "%ch"
     | {r=_t;} "%dh"
     ;
-asmNormalReg returns [antlr::RefAST r]
+asmNormalReg returns [antlr::RefAST r] { r=NULL; }
     : {r=_t;} "%eax"
     | {r=_t;} "%ebx"
     | {r=_t;} "%ecx"
@@ -411,13 +422,13 @@ asmNormalReg returns [antlr::RefAST r]
     ;
 
 asmReg { antlr::RefAST n; }
-    : n=asmNormalReg	{ std::cout << n->getText(); }
-    | n=asmLowReg	{ std::cout << n->getText(); }
-    | n=asmHighReg	{ std::cout << n->getText(); }
-    | n=asmSensitiveReg	{ std::cout << n->getText(); }
+    : n=asmNormalReg	{ if( n ) std::cout << n->getText(); }
+    | n=asmLowReg	{ if( n ) std::cout << n->getText(); }
+    | n=asmHighReg	{ if( n ) std::cout << n->getText(); }
+    | n=asmSensitiveReg	{ if( n ) std::cout << n->getText(); }
     ;
 
-asmSensitiveReg returns [antlr::RefAST r]
+asmSensitiveReg returns [antlr::RefAST r] { r=NULL; }
     : {r=_t;} "%cs"
     | {r=_t;} "%ds"
     | {r=_t;} "%es"
@@ -437,43 +448,44 @@ asmSensitiveReg returns [antlr::RefAST r]
     | {r=_t;} "%db7"
     ;
 
-asmSensitiveInstr returns [int pad] {pad=8;}
-    : ("popf"  | "popfl"  | "popfd")	{pad=21;}
-    | ("pushf" | "pushfl" | "pushfd")	{pad=5;}
-    | ("lgdt" | "lgdtl")		{pad=9;}
-    | ("sgdt" | "sgdtl")
-    | ("lidt" | "lidtl")		{pad=9;}
-    | ("sidt" | "sidtl")
-    | "ljmp"				{pad=9;}
-    | ("lds" | "les" | "lfs" | "lgs" | "lss")	{pad=16;}
-    | "clts"				{pad=14;}
-    | "hlt"				{pad=6;}
-    | "cli"				{pad=7;}
-    | "sti"				{pad=23;}
-    | "lldt"				{pad=16;}
-    | ("sldt" | "sldtl")		{pad=6;}
-    | "ltr"				{pad=16;}
-    | ("str" | "strl")			{pad=9;}
-    | ("inb"  | "inw"  | "inl")		{pad=13;}
-    | ("outb" | "outw" | "outl" )	{pad=16;}
-    | "invlpg"				{pad=6;}
-    | ("iret" | "iretl" | "iretd")	{pad=4;}
-    | "lret"				{pad=4;}
-    | "cpuid"				{pad=6;}
-    | "wrmsr"
-    | "rdmsr"
-    | "int"				{pad=11;}
-    | "ud2"
-    | "invd"
-    | "wbinvd"
-    | ("smsw" | "smswl")
-    | "lmsw"
-    | "arpl"
-    | "lar"
-    | "lsl"
-    | "rsm"
-    | ("pop"  | "popl"  | "popd")	{pad=5;}
-    | ("push" | "pushl" | "pushd")	{pad=5;}
-    | ("mov"  | "movl" )		{pad=12;}
+asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
+    : ({r=_t;} "popf"  | {r=_t;} "popfl"  | {r=_t;} "popfd")	{pad=21;}
+    | ({r=_t;} "pushf" | {r=_t;} "pushfl" | {r=_t;} "pushfd")	{pad=5;}
+    | ({r=_t;} "lgdt" | {r=_t;} "lgdtl")			{pad=9;}
+    | ({r=_t;} "sgdt" | {r=_t;} "sgdtl")
+    | ({r=_t;} "lidt" | {r=_t;} "lidtl")			{pad=9;}
+    | ({r=_t;} "sidt" | {r=_t;} "sidtl")
+    |  {r=_t;} "ljmp"						{pad=9;}
+    | ({r=_t;} "lds" | {r=_t;} "les" | {r=_t;} "lfs")		{pad=16;} 
+    | ({r=_t;} "lgs" | {r=_t;} "lss")				{pad=16;}
+    |  {r=_t;} "clts"						{pad=14;}
+    |  {r=_t;} "hlt"						{pad=6;}
+    |  {r=_t;} "cli"						{pad=7;}
+    |  {r=_t;} "sti"						{pad=23;}
+    |  {r=_t;} "lldt"						{pad=16;}
+    | ({r=_t;} "sldt" | {r=_t;} "sldtl")			{pad=6;}
+    |  {r=_t;} "ltr"						{pad=16;}
+    | ({r=_t;} "str" | {r=_t;} "strl")				{pad=9;}
+    | ({r=_t;} "inb"  | {r=_t;} "inw"  | {r=_t;} "inl")		{pad=13;}
+    | ({r=_t;} "outb" | {r=_t;} "outw" | {r=_t;} "outl" )	{pad=16;}
+    |  {r=_t;} "invlpg"						{pad=6;}
+    | ({r=_t;} "iret" | {r=_t;} "iretl" | {r=_t;} "iretd")	{pad=4;}
+    |  {r=_t;} "lret"						{pad=4;}
+    |  {r=_t;} "cpuid"						{pad=6;}
+    |  {r=_t;} "wrmsr"
+    |  {r=_t;} "rdmsr"
+    |  {r=_t;} "int"						{pad=11;}
+    |  {r=_t;} "ud2"
+    |  {r=_t;} "invd"
+    |  {r=_t;} "wbinvd"
+    | ({r=_t;} "smsw" | {r=_t;} "smswl")
+    |  {r=_t;} "lmsw"
+    |  {r=_t;} "arpl"
+    |  {r=_t;} "lar"
+    |  {r=_t;} "lsl"
+    |  {r=_t;} "rsm"
+    | ({r=_t;} "pop"  | {r=_t;} "popl"  | {r=_t;} "popd")	{pad=5;}
+    | ({r=_t;} "push" | {r=_t;} "pushl" | {r=_t;} "pushd")	{pad=5;}
+    | ({r=_t;} "mov"  | {r=_t;} "movl" )			{pad=12;}
     ;
 

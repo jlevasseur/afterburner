@@ -34,10 +34,12 @@ int main( int argc, char *argv[] )
 
 	tree_parser.asmFile( a );
 
+	/*
 	cout << "List:" << endl;
 	cout << a->toStringList() << endl;
 	cout << "Tree:" << endl;
 	cout << a->toStringTree() << endl;
+	*/
     }
     catch( ANTLRException& e )
     {
