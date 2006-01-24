@@ -74,8 +74,12 @@ asmMacroDef
 
 asmCommand
     : asmMacroDef
-    | Command commandParams
-      { ## = #([ASTCommand, "command"], ##); }
+    | Command commandParams	{ ## = #([ASTCommand, "command"], ##); }
+      // Set the AST type to Command, to simplify the tree walker.
+    | f:".file" simpleParams	{ #f->setType(Command); 
+    				  ## = #([ASTCommand, "command"], ##); }
+    | l:".loc" simpleParams	{ #l->setType(Command);
+    				  ## = #([ASTCommand, "command"], ##); }
     ;
 
 asmInstr
@@ -85,20 +89,37 @@ asmInstr
       { ## = #([ASTSensitive, "sensitive instruction"], ##); }
     ;
 
-commandParams: (commandParam)? (COMMA! commandParam)* ;
+simpleParams: (simpleParam)* ;
+simpleParam: String | Option | Int | Command;
+
+commandParams
+    // Some commands have optional parameters anywhere in the parameter
+    // list, and use the commas to position the specified parameters.
+    // Example: .p2align 4,,15
+    : (commandParam)? 
+         (COMMA! (c:COMMA { #c->setType(ASTVoidParam); })* 
+	 commandParam)*
+    ;
 commandParam: String | Option | instrParam;
 
 instrParams: (instrParam)? (COMMA! instrParam)* ;
 instrParam: regOffsetExpression;
 
+regSillyExpression
+    : (LPAREN asmReg RPAREN) => LPAREN asmReg RPAREN
+    | LPAREN (asmReg)? COMMA asmReg RPAREN
+    ;
+
 regOffsetExpression
-    : expression /*(LPAREN^ ((Int)? COMMA)? asmReg (COMMA (Int)?)? RPAREN)?*/
-    /*| LPAREN^ asmReg RPAREN */
+    // section:disp(base, index, scale)  
+    // where section, base, and index are registers.
+    /*: (asmSegReg COLON)? (expression)? regSillyExpression */
+    : expression
     | asmReg
     ;
 
 primitive
-    : ID | Int | DOT | Command 
+    : ID | Int | Command 
     | LPAREN! expression RPAREN!
     ;
 
@@ -133,9 +154,10 @@ asmReg
     | asmLowReg
     | asmHighReg
     ;
+asmSegReg
+    : "%cs" | "%ds" | "%es" | "%fs" | "%gs" ;
 asmSensitiveReg
-    : "%cs" | "%ds" | "%es" | "%fs" | "%gs" 
-    | "%cr0" | "%cr2" | "%cr3" | "%cr4" 
+    : "%cr0" | "%cr2" | "%cr3" | "%cr4" 
     | "%db0" | "%db1" | "%db2" | "%db3" | "%db4" | "%db5" | "%db6" | "%db7"
     ;
 
@@ -200,6 +222,7 @@ astDefs
     | ASTBasicBlock
     | ASTCommand
     | ASTRegOffset
+    | ASTVoidParam
     ;
 
 
@@ -223,7 +246,7 @@ options {
 // Rules
 COMMA	: ',' ;
 SEMI	: ';' ;
-DOT     : '.' ;
+protected DOT     : '.' ;
 protected COLON   : ':' ;
 protected PERCENT : '%' ;
 protected AT      : '@' ;
@@ -282,7 +305,7 @@ Int
     : (Digit)+ (COLON {$setType(Label);})? ;
 
 Command options {testLiterals=true;}
-    : DOT Name (COLON {$setType(LocalLabel);})? ;
+    : DOT (Letter | Digit | DOT)* (COLON {$setType(LocalLabel);})? ;
 
 Reg options {testLiterals=true;}
     : PERCENT Name ;
@@ -364,6 +387,7 @@ commandParams
 commandParam
     : s:String		{ crap(s); }
     | o:Option 		{ crap(o); }
+    | ASTVoidParam
     | instrParam
     ;
 
@@ -381,7 +405,6 @@ regOffsetExpression
 primitive
     : i:ID 		{ crap(i); }
     | n:Int 		{ crap(n); }
-    | d:DOT 		{ crap(d); }
     | c:Command		{ crap(c); }
     ;
 
