@@ -2,6 +2,7 @@
 
 header "pre_include_hpp" {
     // Inserted before antlr generated includes in the header file.
+    #include <iostream>
 }
 header "post_include_hpp" {
     // Inserted after antlr generated includes in the header file
@@ -36,20 +37,19 @@ options {
 }
 
 // Rules
-asmFile: asmBlocks
-    ;
+asmFile: asmBlocks ;
 
 asmBlocks: (asmAnonymousBlock)? (asmBasicBlock)* ;
 
 asmAnonymousBlock: (asmStatement)+
-    { ## = #([ASTBasicBlock], ##); }
+    { ## = #([ASTBasicBlock, "basic block"], ##); }
     ;
 
 asmBasicBlock: asmLabel (asmStatement)+ 
-    { ## = #([ASTBasicBlock], ##); }
+    { ## = #([ASTBasicBlock, "basic block"], ##); }
     ;
 
-asmEnd: Newline | SEMI ;
+asmEnd: Newline! | SEMI! ;
 
 asmStatement
     : asmInstrPrefix asmEnd
@@ -60,54 +60,65 @@ asmStatement
 
 asmLabel : Label | LocalLabel ;
 
+asmMacroDefParams
+    : (ID (COMMA! ID)*)? 
+      { ## = #([ASTMacroDefParams, "macro parameters"], ##); }
+    ;
+
 asmMacroDef
-    : ".macro" ID (ID (COMMA ID)*)? asmEnd
+    : ".macro"! ID asmMacroDefParams asmEnd!
                asmBlocks
-      ".endm"
-      { ## = #([ASTMacroDef], ##); }
+      ".endm"!
+      { ## = #([ASTMacroDef, "macro definition"], ##); }
     ;
 
 asmCommand
     : asmMacroDef
-    | Command everythingElse		{ ## = #([ASTCommand], ##); }
+    | Command commandParams
+      { ## = #([ASTCommand, "command"], ##); }
     ;
 
 asmInstr
-    : asmInnocuousInstr everythingElse	{ ## = #([ASTInstruction], ##); }
-    | asmSensitive			{ ## = #([ASTSensitive], ##); }
+    : asmInnocuousInstr instrParams	
+      { ## = #([ASTInstruction, "instruction"], ##); }
+    | asmSensitive
+      { ## = #([ASTSensitive, "sensitive instruction"], ##); }
     ;
 
-everythingElse: (param | COMMA)* ;
-param: String | ID | Int | asmReg | Option | Command | DOLLAR | PLUS | MINUS | STAR | DOT | LPAREN | RPAREN;
+commandParams: (commandParam (COMMA! commandParam)* )?;
+commandParam: String | Option | instrParam;
+
+instrParams: (instrParam (COMMA! instrParam)* )?;
+instrParam: regOffsetExpression;
 
 regOffsetExpression
-    : expression (LPAREN ((Int)? COMMA)? asmReg (COMMA (Int)?)? RPAREN)*
-    | LPAREN asmReg RPAREN
+    : expression /*(LPAREN^ ((Int)? COMMA)? asmReg (COMMA (Int)?)? RPAREN)?*/
+    /*| LPAREN^ asmReg RPAREN */
     | asmReg
     ;
 
 primitive
-    : ID | Int | DOT | Command
+    : ID | Int | DOT | Command 
+    | LPAREN! expression RPAREN!
     ;
 
 signExpression
-    : ((PLUS|MINUS))* primitive
+    : (PLUS^|MINUS^)? primitive
     ;
 makeConstantExpression
-    : (DOLLAR)? signExpression
+    : (DOLLAR^)? signExpression
     ;
 multiplyingExpression
-    : makeConstantExpression ((STAR|DIV|"mod") makeConstantExpression)*
+    : makeConstantExpression ((STAR^|DIV^|"mod"^) makeConstantExpression)*
     ;
 addingExpression
-    : multiplyingExpression ((PLUS|MINUS) multiplyingExpression)*
+    : multiplyingExpression ((PLUS^|MINUS^) multiplyingExpression)*
     ;
 
 expression : addingExpression ;
-instrParam : regOffsetExpression ;
 
 asmSensitive {int pad;}
-    : pad = asmSensitiveInstr everythingElse
+    : pad = asmSensitiveInstr instrParams
     | pad = asmSensitiveRegInstr
     ;
 
@@ -129,7 +140,7 @@ asmSensitiveReg
     ;
 
 asmInstrPrefix
-    : ("lock" | "rep")		{ ## = #([ASTInstructionPrefix], ##); }
+    : ("lock" | "rep")	{ ## = #([ASTInstructionPrefix, "prefix"], ##); }
     ;
 
 asmSensitiveRegInstr returns [int pad] {pad=0;}
@@ -137,9 +148,9 @@ asmSensitiveRegInstr returns [int pad] {pad=0;}
     | ("push" | "pushl" | "pushd") (asmSensitiveReg {pad=5;} | instrParam)
     | ("mov"  | "movl" )
         (
-	  (instrParam COMMA asmSensitiveReg) => (instrParam COMMA asmSensitiveReg {pad=12;})
-        | (asmSensitiveReg COMMA instrParam {pad=12;}) 
-	| (instrParam COMMA instrParam)
+	  (instrParam COMMA asmSensitiveReg) => (instrParam COMMA! asmSensitiveReg {pad=12;})
+        | (asmSensitiveReg COMMA! instrParam {pad=12;}) 
+	| (instrParam COMMA! instrParam)
 	)
     ;
 
@@ -182,11 +193,13 @@ asmSensitiveInstr returns [int pad] {pad=8;}
 
 astDefs
     : ASTMacroDef
+    | ASTMacroDefParams
     | ASTInstruction
     | ASTInstructionPrefix
     | ASTSensitive
     | ASTBasicBlock
     | ASTCommand
+    | ASTRegOffset
     ;
 
 
@@ -235,12 +248,12 @@ Newline
 
 Whitespace
     : (' ' | '\t' | '\014')
-	{ _ttype = ANTLR_USE_NAMESPACE(antlr)Token::SKIP; }
+	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
     ;
 
 Comment
     : ((CCommentBegin) => CComment | CPPComment)
-	{ _ttype = ANTLR_USE_NAMESPACE(antlr)Token::SKIP; }
+	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
     ;
 protected CCommentBegin : '/''*';
 protected CCommentEnd   : '*''/' ;
@@ -277,7 +290,6 @@ Reg options {testLiterals=true;}
 Option options {testLiterals=true;}
     : AT Name ;
 
-/*
 {
     // Global stuff in the cpp file.
 }
@@ -288,7 +300,171 @@ options {
 }
 {
     // Additional methods and members.
+    void crap( antlr::RefAST a )
+        { std::cout << a->getText(); }
 }
 
-asmFile: ;
-*/
+asmFile: asmBlocks;
+
+asmBlocks: (asmBlock)* ;
+
+asmBlock: #( ASTBasicBlock (asmLabel)?  (asmStatementLine)* );
+
+asmLabel
+    : l:Label 		{ std::cout << l->getText() << std::endl; }
+    | ll:LocalLabel 	{ std::cout << ll->getText() << std::endl; }
+    ;
+
+asmStatementLine: asmStatement { std::cout << std::endl; } ;
+
+asmStatement
+    : asmInstrPrefix
+    | asmInstr
+    | asmCommand
+    ;
+
+asmCommand
+    : asmMacroDef
+    | #(ASTCommand c:Command	{ std::cout << '\t' << c->getText(); }
+        commandParams
+       )
+    ;
+
+asmMacroDef
+    : #( ASTMacroDef i:ID	{ std::cout << ".macro " << i->getText(); }
+         asmMacroDefParams	{ std::cout << std::endl; }
+	 asmBlocks		{ std::cout << ".endm" << std::endl; }
+       )
+    ;
+asmMacroDefParams
+    : #( ASTMacroDefParams (
+            (i:ID		{ std::cout << ' ' << i->getText();   } )
+            (ii:ID		{ std::cout << ", " << ii->getText(); } )*
+        )? ) 
+    ;
+
+asmInstrPrefix
+    : #( ASMInstructionPrefix i:ID	{std::cout << i->getText();}
+       );
+
+asmInstr
+    : #( ASTInstruction i:ID	{std::cout << '\t' << i->getText();}
+         instrParams )
+    | #( ASTSensitive asmSensitiveInstr instrParams )
+    ;
+
+commandParams: (commandParam)* ;
+commandParam: String | Option | instrParam;
+
+instrParams: (instrParam)* ;
+instrParam: regOffsetExpression;
+
+regOffsetExpression
+    : expr
+    | asmReg
+    ;
+
+primitive
+    : i:ID 		{ crap(i); }
+    | n:Int 		{ crap(n); }
+    | d:DOT 		{ crap(d); }
+    | c:Command		{ crap(c); }
+    ;
+
+expr
+    : { std::cout << '('; }
+    ( #(p:PLUS   ({ crap(p); } expr)+)
+    | #(m:MINUS  ({ crap(m); } expr)+)
+    | #(s:STAR   expr ({ crap(s); } expr)+)
+    | #(d:DIV    expr ({ crap(d); } expr)+)
+    | #(r:"mod"  expr ({ crap(r); } expr)+)
+    | #(D:DOLLAR { crap(D); } expr)
+    )
+      {std::cout << ')'; }
+    | primitive
+    ;
+
+asmLowReg
+    : a:"%al" 		{ crap(a); }
+    | b:"%bl" 		{ crap(b); }
+    | c:"%cl" 		{ crap(c); }
+    | d:"%dl"		{ crap(d); }
+    ;
+asmHighReg returns [antlr::RefAST r]
+    : {r=_t;} "%ah"
+    | {r=_t;} "%bh"
+    | {r=_t;} "%ch"
+    | {r=_t;} "%dh"
+    ;
+asmReg returns [antlr::RefAST r]
+    : a:"%eax" 		{ crap(a); }
+    | b:"%ebx" 		{ crap(b); }
+    | c:"%ecx" 		{ crap(c); }
+    | d:"%edx" 		{ crap(d); }
+    | si:"%esi" 	{ crap(si); }
+    | di:"%edi" 	{ crap(di); }
+    | sp:"%esp" 	{ crap(sp); }
+    | bp:"%ebp"		{ crap(bp); }
+    | asmLowReg
+    | r=asmHighReg { crap(r); }
+    ;
+asmSensitiveReg
+    : c:"%cs" 		{ crap(c); }
+    | d:"%ds" 		{ crap(d); }
+    | e:"%es" 		{ crap(e); }
+    | f:"%fs" 		{ crap(f); }
+    | g:"%gs" 		{ crap(g); }
+    | c0:"%cr0" 	{ crap(c0); }
+    | c2:"%cr2" 	{ crap(c2); }
+    | c3:"%cr3" 	{ crap(c3); }
+    | c4:"%cr4" 	{ crap(c4); }
+    | d0:"%db0" 	{ crap(d0); }
+    | d1:"%db1" 	{ crap(d1); }
+    | d2:"%db2" 	{ crap(d2); }
+    | d3:"%db3" 	{ crap(d3); }
+    | d4:"%db4" 	{ crap(d4); }
+    | d5:"%db5" 	{ crap(d5); }
+    | d6:"%db6" 	{ crap(d6); }
+    | d7:"%db7"		{ crap(d7); }
+    ;
+
+asmSensitiveInstr returns [int pad] {pad=8;}
+    : ("popf"  | "popfl"  | "popfd")	{pad=21;}
+    | ("pushf" | "pushfl" | "pushfd")	{pad=5;}
+    | ("lgdt" | "lgdtl")		{pad=9;}
+    | ("sgdt" | "sgdtl")
+    | ("lidt" | "lidtl")		{pad=9;}
+    | ("sidt" | "sidtl")
+    | "ljmp"				{pad=9;}
+    | ("lds" | "les" | "lfs" | "lgs" | "lss")	{pad=16;}
+    | "clts"				{pad=14;}
+    | "hlt"				{pad=6;}
+    | "cli"				{pad=7;}
+    | "sti"				{pad=23;}
+    | "lldt"				{pad=16;}
+    | ("sldt" | "sldtl")		{pad=6;}
+    | "ltr"				{pad=16;}
+    | ("str" | "strl")			{pad=9;}
+    | ("inb"  | "inw"  | "inl")		{pad=13;}
+    | ("outb" | "outw" | "outl" )	{pad=16;}
+    | "invlpg"				{pad=6;}
+    | ("iret" | "iretl" | "iretd")	{pad=4;}
+    | "lret"				{pad=4;}
+    | "cpuid"				{pad=6;}
+    | "wrmsr"
+    | "rdmsr"
+    | "int"				{pad=11;}
+    | "ud2"
+    | "invd"
+    | "wbinvd"
+    | ("smsw" | "smswl")
+    | "lmsw"
+    | "arpl"
+    | "lar"
+    | "lsl"
+    | "rsm"
+    | ("pop"  | "popl"  | "popd")	{pad=5;}
+    | ("push" | "pushl" | "pushd")	{pad=5;}
+    | ("mov"  | "movl" )		{pad=12;}
+    ;
+

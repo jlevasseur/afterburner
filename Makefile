@@ -17,13 +17,15 @@ LIBS    += -lantlr
 
 all: afterburner
 
-afterburner: afterburner.o AsmLexer.o AsmParser.o
+afterburner: afterburner.o AsmLexer.o AsmParser.o AsmTreeParser.o
 	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 afterburner.o: AsmLexer.hpp AsmParser.hpp
 AsmParser.o: AsmParser.hpp
 AsmLexer.o: AsmLexer.hpp
+AsmTreeParser.o: AsmTreeParser.hpp
 
+AsmTreeParser.cpp AsmTreeParser.hpp: Asm.g
 AsmParser.cpp AsmParser.hpp: Asm.g
 AsmLexer.hpp: Asm.g
 

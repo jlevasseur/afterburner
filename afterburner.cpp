@@ -4,6 +4,7 @@
 
 #include "AsmLexer.hpp"
 #include "AsmParser.hpp"
+#include "AsmTreeParser.hpp"
 #include <antlr/TokenBuffer.hpp>
 
 int main( int argc, char *argv[] )
@@ -25,8 +26,14 @@ int main( int argc, char *argv[] )
 	parser.setASTFactory( &ast_factory );
 
 	parser.asmFile();
-
 	RefAST a = parser.getAST();
+
+	AsmTreeParser tree_parser;
+	tree_parser.initializeASTFactory( ast_factory );
+	tree_parser.setASTFactory( &ast_factory );
+
+	tree_parser.asmFile( a );
+
 	cout << "List:" << endl;
 	cout << a->toStringList() << endl;
 	cout << "Tree:" << endl;
