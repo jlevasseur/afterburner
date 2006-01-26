@@ -96,26 +96,29 @@ commandParams
     // Some commands have optional parameters anywhere in the parameter
     // list, and use the commas to position the specified parameters.
     // Example: .p2align 4,,15
-    : (commandParam)? 
-         (COMMA! (c:COMMA { #c->setType(ASTVoidParam); })* 
-	 commandParam)*
+    : commandParam (COMMA! (commandParam | defaultParam) )* 
+    | defaultParam (COMMA! (commandParam | defaultParam) )+
+    | ! /* nothing */
     ;
+defaultParam: /* nothing */ { ## = #[ASTDefaultParam, "default"]; } ;
 commandParam: String | Option | instrParam;
 
 instrParams: (instrParam)? (COMMA! instrParam)* ;
-instrParam: regOffsetExpression;
-
-regSillyExpression
-    : (LPAREN asmReg RPAREN) => LPAREN asmReg RPAREN
-    | LPAREN (asmReg)? COMMA asmReg RPAREN
+instrParam
+    : (regOffsetExpression) => regOffsetExpression 
+      { ## = #([ASTRegisterDisplacement, "register displacement"], ##); }
+    | expression
+    | asmReg
     ;
 
 regOffsetExpression
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
-    /*: (asmSegReg COLON)? (expression)? regSillyExpression */
-    : expression
-    | asmReg
+    : (asmSegReg COLON)? (expression)? regOffsetBase
+    ;
+regOffsetBase
+    : LPAREN defaultParam COMMA! (asmReg | defaultParam) COMMA! (asmReg | defaultParam) RPAREN
+    | LPAREN asmReg (COMMA! (asmReg | defaultParam) COMMA! (asmReg | defaultParam))? RPAREN
     ;
 
 primitive
@@ -222,7 +225,8 @@ astDefs
     | ASTBasicBlock
     | ASTCommand
     | ASTRegOffset
-    | ASTVoidParam
+    | ASTDefaultParam
+    | ASTRegisterDisplacement
     ;
 
 
@@ -246,8 +250,8 @@ options {
 // Rules
 COMMA	: ',' ;
 SEMI	: ';' ;
+COLON   : ':' ;
 protected DOT     : '.' ;
-protected COLON   : ':' ;
 protected PERCENT : '%' ;
 protected AT      : '@' ;
 
@@ -387,7 +391,7 @@ commandParams
 commandParam
     : s:String		{ crap(s); }
     | o:Option 		{ crap(o); }
-    | ASTVoidParam
+    | ASTDefaultParam
     | instrParam
     ;
 
@@ -395,11 +399,28 @@ instrParams
     : { std::cout << '\t'; } instrParam 
       ({ std::cout << ',' << ' '; } instrParam)*
     ;
-instrParam: regOffsetExpression;
-
-regOffsetExpression
-    : expr
+instrParam
+    : regDisplacement
+    | expr
     | asmReg
+    ;
+
+regDisplacement { antlr::RefAST sr; }
+    // section:disp(base, index, scale)  
+    // where section, base, and index are registers.
+    : #(ASTRegisterDisplacement 
+         (sr=asmSegReg c:COLON { if(sr) std::cout << sr->getText() << c->getText(); })? 
+	 (expr)?
+	 regOffsetBase
+       )
+    ;
+regOffsetBase
+    : l:LPAREN 		{ crap(l); }
+      (ASTDefaultParam | asmReg) 
+      ({ std::cout << ','; } (asmReg | ASTDefaultParam) 
+       { std::cout << ','; } (asmReg | ASTDefaultParam)
+      )? 
+      r:RPAREN		{ crap(r); }
     ;
 
 primitive
@@ -449,15 +470,19 @@ asmReg { antlr::RefAST n; }
     | n=asmLowReg	{ if( n ) std::cout << n->getText(); }
     | n=asmHighReg	{ if( n ) std::cout << n->getText(); }
     | n=asmSensitiveReg	{ if( n ) std::cout << n->getText(); }
+    | n=asmSegReg	{ if( n ) std::cout << n->getText(); }
     ;
 
-asmSensitiveReg returns [antlr::RefAST r] { r=NULL; }
+asmSegReg returns [antlr::RefAST r] { r=NULL; }
     : {r=_t;} "%cs"
     | {r=_t;} "%ds"
     | {r=_t;} "%es"
     | {r=_t;} "%fs"
     | {r=_t;} "%gs"
-    | {r=_t;} "%cr0"
+    ;
+
+asmSensitiveReg returns [antlr::RefAST r] { r=NULL; }
+    : {r=_t;} "%cr0"
     | {r=_t;} "%cr2"
     | {r=_t;} "%cr3"
     | {r=_t;} "%cr4"
