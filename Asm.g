@@ -90,7 +90,7 @@ asmInstr
     ;
 
 simpleParams: (simpleParam)* ;
-simpleParam: String | Option | Int | Command;
+simpleParam: String | Option | Int | Hex | Command;
 
 commandParams
     // Some commands have optional parameters anywhere in the parameter
@@ -122,7 +122,7 @@ regOffsetBase
     ;
 
 primitive
-    : ID | Int | Command 
+    : ID | Int | Hex | Command 
     | LPAREN! expression RPAREN!
     ;
 
@@ -305,8 +305,8 @@ String : '"' ( ~('"') )* '"' ;
 ID options {testLiterals=true;}
     : Name (COLON {$setType(Label);})? ;
 
-Int
-    : (Digit)+ (COLON {$setType(Label);})? ;
+Int : (Digit)+ (COLON {$setType(Label);})? ;
+Hex : '0' 'x' (Digit | 'a'..'f' | 'A'..'F')+ (COLON {$setType(Label);})? ;
 
 Command options {testLiterals=true;}
     : DOT (Letter | Digit | DOT)* (COLON {$setType(LocalLabel);})? ;
@@ -426,6 +426,7 @@ regOffsetBase
 primitive
     : i:ID 		{ crap(i); }
     | n:Int 		{ crap(n); }
+    | h:Hex		{ crap(h); }
     | c:Command		{ crap(c); }
     ;
 
