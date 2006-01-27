@@ -121,18 +121,24 @@ regDisplacementExpr
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
     : expression 
-      (regOffsetBase 
-              {## = #([ASTRegisterDisplacement, "register displacement"], ##);}
+      (regOffsetBase
+          {## = #([ASTRegisterDisplacement, "register displacement"], ##);}
       )?
     ;
 
 regOffsetBase
-    : LPAREN! defaultParam COMMA! (asmReg | defaultParam) COMMA! (Int | defaultParam) RPAREN!
-    | LPAREN! asmReg (COMMA! (asmReg | defaultParam) COMMA! (Int | defaultParam))? RPAREN!
+    : (  LPAREN! defaultParam 
+               COMMA!  (asmReg | defaultParam) 
+	       COMMA!  (Int | defaultParam) RPAREN!
+       | LPAREN! asmReg 
+               (COMMA! (asmReg | defaultParam) 
+	       COMMA! (Int | defaultParam))? RPAREN!
+       ) {## = #([ASTRegisterBaseIndexScale, "register base index scale"], ##);}
     ;
 
 primitive
     : ID | Int | Hex | Command | asmReg
+    | (LPAREN (asmReg|COMMA)) => regOffsetBase
     | LPAREN! expression RPAREN!
     ;
 
@@ -236,6 +242,7 @@ astDefs
     | ASTCommand
     | ASTDefaultParam
     | ASTRegisterDisplacement
+    | ASTRegisterBaseIndexScale
     | ASTDereference
     | ASTSegment
     ;
@@ -412,17 +419,12 @@ instrParams
     ;
 instrParam
     : regExpression
-    | expr
-    | asmReg
     ;
 
-regExpression { antlr::RefAST sr; }
+regExpression
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
-    : #(ASTDereference { std::cout << '*'; } regExpression)
-    | #(ASTSegment sr=asmSegReg { if(sr) std::cout << sr->getText() << ':'; }
-        regExpression)
-    | #(ASTRegisterDisplacement (expr)? regOffsetBase)
+    : expr
     ;
 
 regOffsetBase
@@ -439,11 +441,12 @@ primitive
     | n:Int 		{ crap(n); }
     | h:Hex		{ crap(h); }
     | c:Command		{ crap(c); }
+    | asmReg
     ;
 
-expr
+expr { antlr::RefAST sr; }
     : { std::cout << '('; }
-    ( #(p:PLUS   ({ crap(p); } expr)+)
+    ( #(p:PLUS   expr ({ crap(p); } expr)*)
     | #(m:MINUS  ({ crap(m); } expr)+)
     | #(s:STAR   expr ({ crap(s); } expr)+)
     | #(d:DIV    expr ({ crap(d); } expr)+)
@@ -452,6 +455,11 @@ expr
     )
       {std::cout << ')'; }
     | primitive
+    | #(ASTDereference { std::cout << '*'; } expr)
+    | #(ASTSegment sr=asmSegReg { if(sr) std::cout << sr->getText() << ':'; }
+        expr)
+    | #(ASTRegisterDisplacement expr expr)
+    | #(ASTRegisterBaseIndexScale regOffsetBase)
     ;
 
 asmLowReg returns [antlr::RefAST r] { r=NULL; }
