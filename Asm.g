@@ -83,7 +83,7 @@ asmCommand
     ;
 
 asmInstr
-    : asmInnocuousInstr instrParams	
+    : asmInnocuousInstr (instrParams)?
       { ## = #([ASTInstruction, "instruction"], ##); }
     | asmSensitive
       { ## = #([ASTSensitive, "sensitive instruction"], ##); }
@@ -103,12 +103,8 @@ commandParams
 defaultParam: /* nothing */ { ## = #[ASTDefaultParam, "default"]; } ;
 commandParam: String | Option | instrParam;
 
-instrParams: (instrParam)? (COMMA! instrParam)* ;
-instrParam
-    : (regExpression) => regExpression 
-    | expression
-    | asmReg
-    ;
+instrParams: instrParam (COMMA! instrParam)* ;
+instrParam : regExpression ;
 
 regExpression: regDereferenceExpr ;
 
@@ -124,17 +120,19 @@ regSegmentExpr
 regDisplacementExpr
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
-    : (expression)? regOffsetBase
-      {## = #([ASTRegisterDisplacement, "register displacement"], ##);}
+    : expression 
+      (regOffsetBase 
+              {## = #([ASTRegisterDisplacement, "register displacement"], ##);}
+      )?
     ;
 
 regOffsetBase
-    : LPAREN defaultParam COMMA! (asmReg | defaultParam) COMMA! (asmReg | defaultParam) RPAREN
-    | LPAREN asmReg (COMMA! (asmReg | defaultParam) COMMA! (asmReg | defaultParam))? RPAREN
+    : LPAREN! defaultParam COMMA! (asmReg | defaultParam) COMMA! (Int | defaultParam) RPAREN!
+    | LPAREN! asmReg (COMMA! (asmReg | defaultParam) COMMA! (Int | defaultParam))? RPAREN!
     ;
 
 primitive
-    : ID | Int | Hex | Command 
+    : ID | Int | Hex | Command | asmReg
     | LPAREN! expression RPAREN!
     ;
 
@@ -154,7 +152,7 @@ addingExpression
 expression : addingExpression ;
 
 asmSensitive {int pad;}
-    : pad = asmSensitiveInstr instrParams
+    : pad = asmSensitiveInstr (instrParams)?
     | pad = asmSensitiveRegInstr
     ;
 
@@ -428,12 +426,12 @@ regExpression { antlr::RefAST sr; }
     ;
 
 regOffsetBase
-    : l:LPAREN 		{ crap(l); }
+    : { std::cout << '('; }
       (ASTDefaultParam | asmReg) 
       ({ std::cout << ','; } (asmReg | ASTDefaultParam) 
-       { std::cout << ','; } (asmReg | ASTDefaultParam)
+       { std::cout << ','; } (i:Int {crap(i);} | ASTDefaultParam)
       )? 
-      r:RPAREN		{ crap(r); }
+      { std::cout << ')'; }
     ;
 
 primitive
