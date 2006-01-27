@@ -132,7 +132,7 @@ regOffsetBase
 	       COMMA!  (Int | defaultParam) RPAREN!
        | LPAREN! asmReg 
                (COMMA! (asmReg | defaultParam) 
-	       COMMA! (Int | defaultParam))? RPAREN!
+	       (COMMA! (Int | defaultParam))? )? RPAREN!
        ) {## = #([ASTRegisterBaseIndexScale, "register base index scale"], ##);}
     ;
 
@@ -431,7 +431,7 @@ regOffsetBase
     : { std::cout << '('; }
       (ASTDefaultParam | asmReg) 
       ({ std::cout << ','; } (asmReg | ASTDefaultParam) 
-       { std::cout << ','; } (i:Int {crap(i);} | ASTDefaultParam)
+       ({ std::cout << ','; } (i:Int {crap(i);} | ASTDefaultParam))?
       )? 
       { std::cout << ')'; }
     ;
