@@ -105,17 +105,29 @@ commandParam: String | Option | instrParam;
 
 instrParams: (instrParam)? (COMMA! instrParam)* ;
 instrParam
-    : (regOffsetExpression) => regOffsetExpression 
-      { ## = #([ASTRegisterDisplacement, "register displacement"], ##); }
+    : (regExpression) => regExpression 
     | expression
     | asmReg
     ;
 
-regOffsetExpression
+regExpression: regDereferenceExpr ;
+
+regDereferenceExpr
+    : (s:STAR^			{#s->setType(ASTDereference);} )?
+      regSegmentExpr
+    ;
+regSegmentExpr
+    : (asmSegReg c:COLON^	{#c->setType(ASTSegment);} )?
+      regDisplacementExpr
+    ;
+
+regDisplacementExpr
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
-    : (asmSegReg COLON)? (expression)? regOffsetBase
+    : (expression)? regOffsetBase
+      {## = #([ASTRegisterDisplacement, "register displacement"], ##);}
     ;
+
 regOffsetBase
     : LPAREN defaultParam COMMA! (asmReg | defaultParam) COMMA! (asmReg | defaultParam) RPAREN
     | LPAREN asmReg (COMMA! (asmReg | defaultParam) COMMA! (asmReg | defaultParam))? RPAREN
@@ -224,9 +236,10 @@ astDefs
     | ASTSensitive
     | ASTBasicBlock
     | ASTCommand
-    | ASTRegOffset
     | ASTDefaultParam
     | ASTRegisterDisplacement
+    | ASTDereference
+    | ASTSegment
     ;
 
 
@@ -400,20 +413,20 @@ instrParams
       ({ std::cout << ',' << ' '; } instrParam)*
     ;
 instrParam
-    : regDisplacement
+    : regExpression
     | expr
     | asmReg
     ;
 
-regDisplacement { antlr::RefAST sr; }
+regExpression { antlr::RefAST sr; }
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
-    : #(ASTRegisterDisplacement 
-         (sr=asmSegReg c:COLON { if(sr) std::cout << sr->getText() << c->getText(); })? 
-	 (expr)?
-	 regOffsetBase
-       )
+    : #(ASTDereference { std::cout << '*'; } regExpression)
+    | #(ASTSegment sr=asmSegReg { if(sr) std::cout << sr->getText() << ':'; }
+        regExpression)
+    | #(ASTRegisterDisplacement (expr)? regOffsetBase)
     ;
+
 regOffsetBase
     : l:LPAREN 		{ crap(l); }
       (ASTDefaultParam | asmReg) 
