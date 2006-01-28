@@ -143,7 +143,7 @@ primitive
     ;
 
 signExpression
-    : (PLUS^|MINUS^)? primitive
+    : (m:MINUS^ {#m->setType(ASTNegative);})? primitive
     ;
 makeConstantExpression
     : (DOLLAR^)? signExpression
@@ -245,6 +245,7 @@ astDefs
     | ASTRegisterBaseIndexScale
     | ASTDereference
     | ASTSegment
+    | ASTNegative
     ;
 
 
@@ -312,7 +313,8 @@ protected Letter : 'a'..'z' | 'A'..'Z' | '_';
 protected Digit  : '0'..'9';
 
 protected Name   : Letter (Letter | Digit)* ;
-String : '"' ( ~('"') )* '"' ;
+String : '"' ( StringEscape | ~('\\'|'"') )* '"' ;
+protected StringEscape : '\\' . ;
 
 // Note: For all literals that we wish to lookup in the hash table, there
 // must be a Lexer rule that can match it, with the testLiterals option
@@ -349,6 +351,8 @@ options {
     // Additional methods and members.
     void crap( antlr::RefAST a )
         { std::cout << a->getText(); }
+    void ch( char ch )
+        { std::cout << ch; }
 }
 
 asmFile: asmBlocks;
@@ -444,21 +448,24 @@ primitive
     | asmReg
     ;
 
+subexpr
+    : (primitive) => expr
+    | { ch('('); }    expr    { ch(')'); }
+    ;
+
 expr { antlr::RefAST sr; }
-    : { std::cout << '('; }
-    ( #(p:PLUS   expr ({ crap(p); } expr)*)
-    | #(m:MINUS  ({ crap(m); } expr)+)
-    | #(s:STAR   expr ({ crap(s); } expr)+)
-    | #(d:DIV    expr ({ crap(d); } expr)+)
-    | #(r:"mod"  expr ({ crap(r); } expr)+)
-    | #(D:DOLLAR { crap(D); } expr)
-    )
-      {std::cout << ')'; }
+    : #(p:PLUS  expr ({ crap(p); } expr)+)
+    | #(m:MINUS expr ({ crap(m); } expr)+)
+    | #(ASTNegative { ch('-'); } subexpr)
+    | #(s:STAR   subexpr ({ crap(s); } subexpr)+)
+    | #(d:DIV    subexpr ({ crap(d); } subexpr)+)
+    | #(r:"mod"  subexpr ({ crap(r); } subexpr)+)
+    | #(D:DOLLAR { crap(D); } subexpr)
     | primitive
     | #(ASTDereference { std::cout << '*'; } expr)
     | #(ASTSegment sr=asmSegReg { if(sr) std::cout << sr->getText() << ':'; }
         expr)
-    | #(ASTRegisterDisplacement expr expr)
+    | #(ASTRegisterDisplacement subexpr expr)
     | #(ASTRegisterBaseIndexScale regOffsetBase)
     ;
 
