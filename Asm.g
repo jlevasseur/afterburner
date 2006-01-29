@@ -463,7 +463,7 @@ asmInstrPrefix
        );
 
 asmInstr {antlr::RefAST r;}
-    : #( ASTInstruction r=asmInnocuousInstr {std::cout << '\t' << r->getText();}
+    : #( ASTInstruction i:. {std::cout << '\t' << i->getText();}
          (instrParams)? )
     | #( ASTSensitive r=asmSensitiveInstr  {if(r) startSensitive(r); }
          (instrParams)? { if(r) endSensitive(r); } )
@@ -595,13 +595,6 @@ asmSensitiveReg returns [antlr::RefAST r] { r=NULL; }
     | {r=_t;} "%db5"
     | {r=_t;} "%db6"
     | {r=_t;} "%db7"
-    ;
-
-asmInnocuousInstr returns [antlr::RefAST r] { r=NULL; }
-    : i:ID	{ r=i; }
-    | ({r=_t;} "pop"  | {r=_t;} "popl"  | {r=_t;} "popd")
-    | ({r=_t;} "push" | {r=_t;} "pushl" | {r=_t;} "pushd")
-    | ({r=_t;} "mov"  | {r=_t;} "movl"  | {r=_t;} "movd")
     ;
 
 asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
