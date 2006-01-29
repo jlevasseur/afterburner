@@ -29,6 +29,7 @@ int main( int argc, char *argv[] )
 	RefAST a = parser.getAST();
 
 	AsmTreeParser tree_parser;
+	tree_parser.init();
 	tree_parser.initializeASTFactory( ast_factory );
 	tree_parser.setASTFactory( &ast_factory );
 

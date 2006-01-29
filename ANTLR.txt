@@ -27,4 +27,12 @@
 - Expressions are easily parsed from syntax via hierarchical rules.  On the
   other hand, AST expressions are easily parsed by using an inductive rule.
 
+[ Assembler Grammar ]
+
+- How should I specify literals for the instructions?  If I declare
+  each instruction indivually, they'll go into the string hash table,
+  giving good performance, but increasing the chance that I forget an
+  instruction.  If I use a Lexer literal, then I can encode the AT&T
+  instruction endings properly.
+- How can I avoid listing instructions where I want a general operation?
 
