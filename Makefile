@@ -1,15 +1,13 @@
 
-antlr_root    ?= /home/joshua/apps
-antlr_include ?= $(antlr_root)/include
-antlr_lib     ?= $(antlr_root)/lib
-
 O ?= .
+
+antlr_cflags ?= $(shell antlr-config --cflags)
+antlr_libs   ?= $(shell antlr-config --libs)
 
 all: $(O)/afterburner
 
-CPPFLAGS  += -Wall -O2 -I$(antlr_include)
-LDFLAGS += -L$(antlr_lib)
-LIBS    += -lantlr
+CPPFLAGS  += -Wall -O2 $(antlr_cflags)
+LIBS    += $(antlr_libs)
 
 $(O)/afterburner: $(O)/afterburner.o \
                   $(O)/AsmLexer.o $(O)/AsmParser.o $(O)/AsmTreeParser.o
@@ -20,22 +18,33 @@ $(O)/AsmParser.o: AsmParser.hpp AsmParser.cpp
 $(O)/AsmLexer.o: AsmLexer.hpp AsmLexer.cpp
 $(O)/AsmTreeParser.o: AsmTreeParser.hpp AsmTreeParser.cpp
 
+clean:
+	-rm -f $(O)/*.o $(O)/afterburner $(O)/*.s
+
+######################################################################
+##
+##  Test the afterburner
+##
+######################################################################
+
 $(O)/%.s: %.cpp
 	g++ $(CPPFLAGS) -S $< -o $@
-$(O)/%.afterburnt.s: %.s $(O)/afterburner
+$(O)/%.afterburnt.s: $(O)/%.s $(O)/afterburner
 	$(O)/afterburner $< > $@
 $(O)/%.o.s: $(O)/%.o
 	objdump -d $< > $@
 
+## Compare a normal binary to an afterburnt binary 
 .PHONY: test
 test: $(O)/afterburner $(O)/AsmParser.s $(O)/AsmParser.afterburnt.s \
-      $(O)/AsmParser.o $(O)/AsmParser.o.s \
-      $(O)/AsmParser.afterburnt.o $(O)/AsmParser.afterburnt.o.s
-	
+      $(O)/AsmParser.o $(O)/AsmParser.afterburnt.o
+	diff $(O)/AsmParser.o $(O)/AsmParser.afterburnt.o
 
-clean:
-	-rm -f $(O)/*.o $(O)/afterburner $(O)/*.s
-
+######################################################################
+##
+##  Process the antlr grammars, but only if rebuild_antlr=1
+##
+######################################################################
 
 ifdef rebuild_antlr
 
@@ -47,7 +56,7 @@ AsmLexer.hpp AsmLexer.cpp: Asm.g
 %Parser.cpp %Parser.hpp \
 %TreeParser.cpp %TreeParser.hpp \
 %ParserTokenTypes.hpp %ParserTokenTypes.txt: %.g
-	$(antlr_root)/bin/antlr $<
+	antlr $<
 
 endif
 
