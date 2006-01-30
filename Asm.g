@@ -165,21 +165,23 @@ asmMaybeSensitive returns [bool sensitive] { sensitive=false; }
     | sensitive=asmSensitiveRegInstr
     ;
 
-asmLowReg8: "%al" | "%bl" | "%cl" | "%dl";
-asmHighReg8: "%ah" | "%bh" | "%ch" | "%dh";
-asmReg16: "%ax" | "%bx" | "%cx" | "%dx" | "%si" | "%di" | "%sp" | "%bp";
-asmReg32: "%eax" | "%ebx" | "%ecx" | "%edx" | "%esi" | "%edi" | "%esp" | "%ebp";
 asmReg
-    : asmReg32
-    | asmReg16
-    | asmLowReg8
-    | asmHighReg8
+    : ( "%al" | "%bl" | "%cl" | "%dl"
+      | "%ah" | "%bh" | "%ch" | "%dh"
+      | "%ax" | "%bx" | "%cx" | "%dx" | "%si" | "%di" | "%sp" | "%bp"
+      | "%eax" | "%ebx" | "%ecx" | "%edx" | "%esi" | "%edi" | "%esp" | "%ebp"
+      )
+        { ##->setType(ASTRegister); }
     ;
 asmSegReg
-    : "%cs" | "%ds" | "%es" | "%fs" | "%gs" ;
+    : ("%cs" | "%ds" | "%es" | "%fs" | "%gs")
+      { ##->setType(ASTRegister); }
+    ;
 asmSensitiveReg
-    : "%cr0" | "%cr2" | "%cr3" | "%cr4" 
-    | "%db0" | "%db1" | "%db2" | "%db3" | "%db4" | "%db5" | "%db6" | "%db7"
+    : ("%cr0" | "%cr2" | "%cr3" | "%cr4" 
+      | "%db0" | "%db1" | "%db2" | "%db3" | "%db4" | "%db5" | "%db6" | "%db7"
+      )
+      { ##->setType(ASTRegister); }
     ;
 
 asmInstrPrefix
@@ -252,6 +254,7 @@ astDefs
     | ASTRegisterBaseIndexScale
     | ASTDereference
     | ASTSegment
+    | ASTRegister
     | ASTNegative
     ;
 
@@ -496,8 +499,8 @@ regExpression
 
 regOffsetBase
     : { std::cout << '('; }
-      (ASTDefaultParam | asmReg) 
-      ({ std::cout << ','; } (asmReg | ASTDefaultParam) 
+      (ASTDefaultParam | r1:ASTRegister {crap(r1);}) 
+      ({ std::cout << ','; } (ASTDefaultParam | r2:ASTRegister {crap(r2);}) 
        ({ std::cout << ','; } (i:Int {crap(i);} | ASTDefaultParam))?
       )? 
       { std::cout << ')'; }
@@ -508,7 +511,7 @@ primitive
     | n:Int 		{ crap(n); }
     | h:Hex		{ crap(h); }
     | c:Command		{ crap(c); }
-    | asmReg
+    | r:ASTRegister	{ crap(r); }
     ;
 
 subexpr
@@ -522,79 +525,13 @@ expr { antlr::RefAST sr; }
     | #(ASTNegative { ch('-'); } subexpr)
     | #(s:STAR   subexpr ({ crap(s); } subexpr)+)
     | #(d:DIV    subexpr ({ crap(d); } subexpr)+)
-    | #(r:"mod"  subexpr ({ crap(r); } subexpr)+)
+    | #(m2:"mod"  subexpr ({ crap(m2); } subexpr)+)
     | #(D:DOLLAR { crap(D); } subexpr)
     | primitive
     | #(ASTDereference { std::cout << '*'; } expr)
-    | #(ASTSegment sr=asmSegReg { if(sr) std::cout << sr->getText() << ':'; }
-        expr)
+    | #(ASTSegment r:ASTRegister { std::cout << r->getText() << ':'; } expr)
     | #(ASTRegisterDisplacement subexpr expr)
     | #(ASTRegisterBaseIndexScale regOffsetBase)
-    ;
-
-asmLowReg8 returns [antlr::RefAST r] { r=NULL; }
-    : {r=_t;} "%al"
-    | {r=_t;} "%bl"
-    | {r=_t;} "%cl"
-    | {r=_t;} "%dl"
-    ;
-asmHighReg8 returns [antlr::RefAST r] { r=NULL; }
-    : {r=_t;} "%ah"
-    | {r=_t;} "%bh"
-    | {r=_t;} "%ch"
-    | {r=_t;} "%dh"
-    ;
-asmReg16 returns [antlr::RefAST r] { r=NULL; }
-    : {r=_t;} "%ax" 
-    | {r=_t;} "%bx" 
-    | {r=_t;} "%cx" 
-    | {r=_t;} "%dx" 
-    | {r=_t;} "%si" 
-    | {r=_t;} "%di" 
-    | {r=_t;} "%sp" 
-    | {r=_t;} "%bp"
-    ;
-asmReg32 returns [antlr::RefAST r] { r=NULL; }
-    : {r=_t;} "%eax"
-    | {r=_t;} "%ebx"
-    | {r=_t;} "%ecx"
-    | {r=_t;} "%edx"
-    | {r=_t;} "%esi"
-    | {r=_t;} "%edi"
-    | {r=_t;} "%esp"
-    | {r=_t;} "%ebp"
-    ;
-
-asmReg { antlr::RefAST n; }
-    : n=asmReg32	{ if( n ) std::cout << n->getText(); }
-    | n=asmReg16	{ if( n ) std::cout << n->getText(); }
-    | n=asmLowReg8	{ if( n ) std::cout << n->getText(); }
-    | n=asmHighReg8	{ if( n ) std::cout << n->getText(); }
-    | n=asmSensitiveReg	{ if( n ) std::cout << n->getText(); }
-    | n=asmSegReg	{ if( n ) std::cout << n->getText(); }
-    ;
-
-asmSegReg returns [antlr::RefAST r] { r=NULL; }
-    : {r=_t;} "%cs"
-    | {r=_t;} "%ds"
-    | {r=_t;} "%es"
-    | {r=_t;} "%fs"
-    | {r=_t;} "%gs"
-    ;
-
-asmSensitiveReg returns [antlr::RefAST r] { r=NULL; }
-    : {r=_t;} "%cr0"
-    | {r=_t;} "%cr2"
-    | {r=_t;} "%cr3"
-    | {r=_t;} "%cr4"
-    | {r=_t;} "%db0"
-    | {r=_t;} "%db1"
-    | {r=_t;} "%db2"
-    | {r=_t;} "%db3"
-    | {r=_t;} "%db4"
-    | {r=_t;} "%db5"
-    | {r=_t;} "%db6"
-    | {r=_t;} "%db7"
     ;
 
 asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
