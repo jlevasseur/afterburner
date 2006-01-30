@@ -249,9 +249,13 @@ ia32_arpl  : ("arpl")				{ ##->setType(IA32_arpl); } ;
 ia32_lar   : ("lar")				{ ##->setType(IA32_lar); } ;
 ia32_lsl   : ("lsl")				{ ##->setType(IA32_lsl); } ;
 ia32_rsm   : ("rsm")				{ ##->setType(IA32_rsm); } ;
-ia32_pop   : ("pop"  | "popl"  | "popd")	{ ##->setType(IA32_pop); } ;
-ia32_push  : ("push" | "pushl" | "pushd")	{ ##->setType(IA32_push); } ;
-ia32_mov   : ("mov"  | "movl"  | "movd")	{ ##->setType(IA32_mov); } ;
+ia32_pop
+    : ("pop"  | "popl"  | "popd" | "popb" | "popw" ) { ##->setType(IA32_pop); };
+ia32_push
+    : ("push" | "pushl" | "pushd" | "pushb" | "pushw") 
+      { ##->setType(IA32_push); } ;
+ia32_mov
+    : ("mov"  | "movl"  | "movd" | "movb" | "movw") { ##->setType(IA32_mov); } ;
 
 asmSensitiveInstr 
     : ia32_popf | ia32_pushf | ia32_lgdt | ia32_sgdt | ia32_lidt | ia32_sidt
@@ -575,12 +579,13 @@ subexpr
 expr
     : #(p:PLUS  expr ({ crap(p); } expr)+)
     | #(m:MINUS expr ({ crap(m); } expr)+)
-    | #(o:OR   expr ({ crap(o); } expr)+)
+    | #(o:OR   subexpr ({ crap(o); } subexpr)+)
     | #(n:NOT {crap(n);} subexpr)
     | #(ASTNegative { ch('-'); } subexpr)
     | #(s:STAR   subexpr ({ crap(s); } subexpr)+)
     | #(d:DIV    subexpr ({ crap(d); } subexpr)+)
     | #(a:AND    subexpr ({ crap(a); } subexpr)+)
+    | #(x:XOR    subexpr ({ crap(x); } subexpr)+)
     | #(sl:SHIFTLEFT  subexpr ({ crap(sl); } subexpr)+ )
     | #(sr:SHIFTRIGHT subexpr ({ crap(sr); } subexpr)+ )
     | #(p2:PERCENT  subexpr ({ crap(p2); } subexpr)+)
