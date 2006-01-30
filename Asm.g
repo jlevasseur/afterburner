@@ -386,8 +386,8 @@ protected StringEscape : '\\' . ;
 ID options {testLiterals=true;}
     : Name (COLON {$setType(Label);})? ;
 
-Int : (Digit)+ (COLON {$setType(Label);})? 
-      ('f'|'b' {$setType(RelativeLocation);})?
+Int : (Digit)+ (COLON {$setType(Label);} |
+                ('f'|'b' {$setType(RelativeLocation);}))?
     ;
 Hex : '0' 'x' (Digit | 'a'..'f' | 'A'..'F')+ (COLON {$setType(Label);})? ;
 
