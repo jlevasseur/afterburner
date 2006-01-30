@@ -140,7 +140,10 @@ regOffsetBase
     ;
 
 primitive
-    : ID | Int | Hex | Command | asmReg
+    : ID | Int | Hex | Command | asmReg | Reg | RelativeLocation
+    | (asmFpReg LPAREN) => asmFpReg LPAREN! Int RPAREN! 
+          { ## = #([ASTRegisterIndex, "register index"], ##);}
+    | asmFpReg
     | (LPAREN (asmReg|COMMA)) => regOffsetBase
     | LPAREN! expression RPAREN!
     ;
@@ -161,7 +164,7 @@ addingExpression
 expression : addingExpression ;
 
 asmMaybeSensitive returns [bool sensitive] { sensitive=false; }
-    : asmSensitiveInstr  { sensitive=true; }
+    : asmSensitiveInstr (instrParams)? { sensitive=true; }
     | sensitive=asmSensitiveRegInstr
     ;
 
@@ -173,6 +176,7 @@ asmReg
       )
         { ##->setType(ASTRegister); }
     ;
+asmFpReg : "%st" { ##->setType(ASTRegister); };
 asmSegReg
     : ("%cs" | "%ds" | "%es" | "%fs" | "%gs")
       { ##->setType(ASTRegister); }
@@ -267,6 +271,7 @@ astDefs
     | ASTDefaultParam
     | ASTRegisterDisplacement
     | ASTRegisterBaseIndexScale
+    | ASTRegisterIndex
     | ASTDereference
     | ASTSegment
     | ASTRegister
@@ -344,7 +349,7 @@ protected CPPComment: '/''/' ( ~('\n') )* ;	// Don't swallow the newline.
 protected Letter : 'a'..'z' | 'A'..'Z' | '_';
 protected Digit  : '0'..'9';
 
-protected Name   : Letter (Letter | Digit)* ;
+protected Name   : Letter (Letter | Digit | DOT)* ;
 String : '"' ( StringEscape | ~('\\'|'"') )* '"' ;
 protected StringEscape : '\\' . ;
 
@@ -357,7 +362,9 @@ protected StringEscape : '\\' . ;
 ID options {testLiterals=true;}
     : Name (COLON {$setType(Label);})? ;
 
-Int : (Digit)+ (COLON {$setType(Label);})? ;
+Int : (Digit)+ (COLON {$setType(Label);})? 
+      ('f'|'b' {$setType(RelativeLocation);})?
+    ;
 Hex : '0' 'x' (Digit | 'a'..'f' | 'A'..'F')+ (COLON {$setType(Label);})? ;
 
 Command options {testLiterals=true;}
@@ -534,6 +541,7 @@ primitive
     | h:Hex		{ crap(h); }
     | c:Command		{ crap(c); }
     | r:ASTRegister	{ crap(r); }
+    | rl:RelativeLocation { crap(rl); }
     ;
 
 subexpr
@@ -554,6 +562,8 @@ expr { antlr::RefAST sr; }
     | #(ASTSegment r:ASTRegister { std::cout << r->getText() << ':'; } expr)
     | #(ASTRegisterDisplacement subexpr expr)
     | #(ASTRegisterBaseIndexScale regOffsetBase)
+    | #(ASTRegisterIndex ri:ASTRegister in:Int 
+             { std::cout << ri->getText() << '(' << in->getText() << ')'; } )
     ;
 
 asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
