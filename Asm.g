@@ -191,11 +191,9 @@ asmInstrPrefix
 asmInnocuousInstr: ID;
 
 asmSensitiveRegInstr returns [bool sensitive] {sensitive=false;}
-    : ("pop"  | "popl"  | "popd")  
-        (asmSensitiveReg {sensitive=true;} | instrParam)
-    | ("push" | "pushl" | "pushd")
-        (asmSensitiveReg {sensitive=true;} | instrParam)
-    | ("mov"  | "movl"  | "movd")
+    : ia32_pop  (asmSensitiveReg {sensitive=true;} | instrParam)
+    | ia32_push (asmSensitiveReg {sensitive=true;} | instrParam)
+    | ia32_mov
         (
 	  (instrParam COMMA asmSensitiveReg) => 
 	    (instrParam COMMA! asmSensitiveReg)		{sensitive=true;}
@@ -204,41 +202,58 @@ asmSensitiveRegInstr returns [bool sensitive] {sensitive=false;}
 	)
     ;
 
+// We want instruction tokens, but via the string hash table, so 
+// build the tokens manually.  Recall that tokens start with a capital letter.
+ia32_popf : ("popf"  | "popfl"  | "popfd")	{ ##->setType(IA32_popf); } ;
+ia32_pushf: ("pushf" | "pushfl" | "pushfd")	{ ##->setType(IA32_pushf); } ;
+ia32_lgdt : ("lgdt"  | "lgdtl"  | "lgdtd")	{ ##->setType(IA32_lgdt); } ;
+ia32_sgdt : ("sgdt"  | "sgdtl"  | "sgdtd")	{ ##->setType(IA32_sgdt); } ;
+ia32_lidt : ("lidt"  | "lidtl"  | "lidtd")	{ ##->setType(IA32_lidt); } ;
+ia32_sidt : ("sidt"  | "sidtl"  | "sidtd")	{ ##->setType(IA32_sidt); } ;
+ia32_ljmp : ("ljmp")				{ ##->setType(IA32_ljmp); } ;
+ia32_lds  : ("lds")				{ ##->setType(IA32_lds); } ;
+ia32_les  : ("les")				{ ##->setType(IA32_les); } ;
+ia32_lfs  : ("lfs")				{ ##->setType(IA32_lfs); } ;
+ia32_lgs  : ("lgs")				{ ##->setType(IA32_lgs); } ;
+ia32_lss  : ("lss")				{ ##->setType(IA32_lss); } ;
+ia32_clts : ("clts")				{ ##->setType(IA32_clts); } ;
+ia32_hlt  : ("hlt")				{ ##->setType(IA32_hlt); } ;
+ia32_cli  : ("cli")				{ ##->setType(IA32_cli); } ;
+ia32_sti  : ("sti")				{ ##->setType(IA32_sti); } ;
+ia32_lldt : ("lldt" | "lldtl" | "lldtd")	{ ##->setType(IA32_lldt); } ;
+ia32_sldt : ("sldt" | "sldtl" | "sldtd" )	{ ##->setType(IA32_sldt); } ;
+ia32_ltr  : ("ltr"  | "ltrl" | "ltrd" )		{ ##->setType(IA32_ltr); } ;
+ia32_str  : ("str"  | "strl" | "strd" )		{ ##->setType(IA32_str); } ;
+ia32_in   : ("inb"  | "inw"  | "inl" )		{ ##->setType(IA32_in); } ;
+ia32_out  : ("outb" | "outw" | "outl" )		{ ##->setType(IA32_out); } ;
+ia32_invlpg : ("invlpg")			{ ##->setType(IA32_invlpg); } ;
+ia32_iret : ("iret" | "iretl" | "iretd")	{ ##->setType(IA32_iret); } ;
+ia32_lret : ("lret")				{ ##->setType(IA32_lret); } ;
+ia32_cpuid : ("cpuid")				{ ##->setType(IA32_cpuid); } ;
+ia32_wrmsr : ("wrmsr")				{ ##->setType(IA32_wrmsr); } ;
+ia32_rdmsr : ("rdmsr")				{ ##->setType(IA32_rdmsr); } ;
+ia32_int   : ("int")				{ ##->setType(IA32_int); } ;
+ia32_ud2   : ("ud2")				{ ##->setType(IA32_ud2); } ;
+ia32_invd  : ("invd")				{ ##->setType(IA32_invd); } ;
+ia32_wbinvd : ("wbinvd")			{ ##->setType(IA32_wbinvd); } ;
+ia32_smsw  : ("smsw" | "smswl" | "smswd")	{ ##->setType(IA32_smsw); } ;
+ia32_lmsw  : ("lmsw" | "lmswl" | "lmswd")	{ ##->setType(IA32_lmsw); } ;
+ia32_arpl  : ("arpl")				{ ##->setType(IA32_arpl); } ;
+ia32_lar   : ("lar")				{ ##->setType(IA32_lar); } ;
+ia32_lsl   : ("lsl")				{ ##->setType(IA32_lsl); } ;
+ia32_rsm   : ("rsm")				{ ##->setType(IA32_rsm); } ;
+ia32_pop   : ("pop"  | "popl"  | "popd")	{ ##->setType(IA32_pop); } ;
+ia32_push  : ("push" | "pushl" | "pushd")	{ ##->setType(IA32_push); } ;
+ia32_mov   : ("mov"  | "movl"  | "movd")	{ ##->setType(IA32_mov); } ;
+
 asmSensitiveInstr 
-    : "popf"  | "popfl"  | "popfd"
-    | "pushf" | "pushfl" | "pushfd"
-    | "lgdt"  | "lgdtl"  | "lgdtd"
-    | "sgdt"  | "sgdtl"  | "sgdtd"
-    | "lidt"  | "lidtl"  | "lidtd"
-    | "sidt"  | "sidtl"  | "sidtd"
-    | "ljmp"
-    | "lds" | "les" | "lfs" | "lgs" | "lss"
-    | "clts"
-    | "hlt"
-    | "cli"
-    | "sti"
-    | "lldt"
-    | "sldt" | "sldtl" | "sldtd"
-    | "ltr"
-    | "str"  | "strl" | "strd"
-    | "inb"  | "inw"  | "inl"
-    | "outb" | "outw" | "outl" 
-    | "invlpg"
-    | "iret" | "iretl" | "iretd"
-    | "lret"
-    | "cpuid"
-    | "wrmsr"
-    | "rdmsr"
-    | "int"
-    | "ud2"
-    | "invd"
-    | "wbinvd"
-    | "smsw" | "smswl" | "smswd"
-    | "lmsw" | "lmswl" | "lmswd"
-    | "arpl"
-    | "lar"
-    | "lsl"
-    | "rsm"
+    : ia32_popf | ia32_pushf | ia32_lgdt | ia32_sgdt | ia32_lidt | ia32_sidt
+    | ia32_ljmp | ia32_lds | ia32_les | ia32_lfs | ia32_lgs | ia32_lss
+    | ia32_clts | ia32_hlt | ia32_cli | ia32_sti | ia32_lldt | ia32_sldt
+    | ia32_ltr  | ia32_str | ia32_in  | ia32_out
+    | ia32_invlpg | ia32_iret | ia32_lret | ia32_cpuid 
+    | ia32_wrmsr | ia32_rdmsr | ia32_int | ia32_ud2 | ia32_invd | ia32_wbinvd
+    | ia32_smsw | ia32_lmsw | ia32_arpl | ia32_lar | ia32_lsl | ia32_rsm
     ;
 
 astDefs
@@ -265,7 +280,7 @@ astDefs
 
 class AsmLexer extends Lexer;
 options {
-    k = 5;
+    k = 3;
     caseSensitive = true;
     testLiterals = false;
     // Specify the vocabulary, to support inversions in a scanner rule.
@@ -468,8 +483,8 @@ asmInstrPrefix
 asmInstr {antlr::RefAST r;}
     : #( ASTInstruction i:. {std::cout << '\t' << i->getText();}
          (instrParams)? )
-    | #( ASTSensitive r=asmSensitiveInstr  {if(r) startSensitive(r); }
-         (instrParams)? { if(r) endSensitive(r); } )
+    | #( ASTSensitive r=asmSensitiveInstr  { startSensitive(r); }
+         (instrParams)? { endSensitive(r); } )
     ;
 
 commandParams
@@ -535,43 +550,46 @@ expr { antlr::RefAST sr; }
     ;
 
 asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
-    : ({r=_t;} "popf"  | {r=_t;} "popfl"  | {r=_t;} "popfd")	{pad=21;}
-    | ({r=_t;} "pushf" | {r=_t;} "pushfl" | {r=_t;} "pushfd")	{pad=5;}
-    | ({r=_t;} "lgdt" | {r=_t;} "lgdtl" | {r=_t;} "lgdtd")	{pad=9;}
-    | ({r=_t;} "sgdt" | {r=_t;} "sgdtl" | {r=_t;} "sgdtd")
-    | ({r=_t;} "lidt" | {r=_t;} "lidtl" | {r=_t;} "lidtd")	{pad=9;}
-    | ({r=_t;} "sidt" | {r=_t;} "sidtl" | {r=_t;} "sidtd")
-    |  {r=_t;} "ljmp"						{pad=9;}
-    | ({r=_t;} "lds" | {r=_t;} "les" | {r=_t;} "lfs")		{pad=16;} 
-    | ({r=_t;} "lgs" | {r=_t;} "lss")				{pad=16;}
-    |  {r=_t;} "clts"						{pad=14;}
-    |  {r=_t;} "hlt"						{pad=6;}
-    |  {r=_t;} "cli"						{pad=7;}
-    |  {r=_t;} "sti"						{pad=23;}
-    |  {r=_t;} "lldt"						{pad=16;}
-    | ({r=_t;} "sldt" | {r=_t;} "sldtl" | {r=_t;} "sldtd")	{pad=6;}
-    |  {r=_t;} "ltr"						{pad=16;}
-    | ({r=_t;} "str"  | {r=_t;} "strl" | {r=_t;} "strd")	{pad=9;}
-    | ({r=_t;} "inb"  | {r=_t;} "inw"  | {r=_t;} "inl")		{pad=13;}
-    | ({r=_t;} "outb" | {r=_t;} "outw" | {r=_t;} "outl" )	{pad=16;}
-    |  {r=_t;} "invlpg"						{pad=6;}
-    | ({r=_t;} "iret" | {r=_t;} "iretl" | {r=_t;} "iretd")	{pad=4;}
-    |  {r=_t;} "lret"						{pad=4;}
-    |  {r=_t;} "cpuid"						{pad=6;}
-    |  {r=_t;} "wrmsr"
-    |  {r=_t;} "rdmsr"
-    |  {r=_t;} "int"						{pad=11;}
-    |  {r=_t;} "ud2"
-    |  {r=_t;} "invd"
-    |  {r=_t;} "wbinvd"
-    | ({r=_t;} "smsw" | {r=_t;} "smswl" | {r=_t;} "smswd")
-    |  {r=_t;} "lmsw"
-    |  {r=_t;} "arpl"
-    |  {r=_t;} "lar"
-    |  {r=_t;} "lsl"
-    |  {r=_t;} "rsm"
-    | ({r=_t;} "pop"  | {r=_t;} "popl"  | {r=_t;} "popd")	{pad=5;}
-    | ({r=_t;} "push" | {r=_t;} "pushl" | {r=_t;} "pushd")	{pad=5;}
-    | ({r=_t;} "mov"  | {r=_t;} "movl" )			{pad=12;}
+    : popf:IA32_popf	{r=popf;  pad=21;}
+    | pushf:IA32_pushf	{r=pushf; pad=5;}
+    | lgdt:IA32_lgdt	{r=lgdt;  pad=9;}
+    | sgdt:IA32_sgdt	{r=sgdt; }
+    | lidt:IA32_lidt	{r=lidt;  pad=9;}
+    | sidt:IA32_sidt	{r=sidt; }
+    | ljmp:IA32_ljmp	{r=ljmp;  pad=9;}
+    | lds:IA32_lds	{r=lds;   pad=16;}
+    | les:IA32_les	{r=les;   pad=16;}
+    | lfs:IA32_lfs	{r=lfs;   pad=16;}
+    | lgs:IA32_lgs	{r=lgs;   pad=16;}
+    | lss:IA32_lss	{r=lss;   pad=16;}
+    | clts:IA32_clts	{r=clts;  pad=14;}
+    | hlt:IA32_hlt	{r=hlt;   pad=6;}
+    | cli:IA32_cli	{r=cli;   pad=7;}
+    | sti:IA32_sti	{r=sti;   pad=23;}
+    | lldt:IA32_lldt	{r=lldt;  pad=16;}
+    | sldt:IA32_sldt	{r=sldt;  pad=6;}
+    | ltr:IA32_ltr	{r=ltr;   pad=16;}
+    | str:IA32_str	{r=str;   pad=9;}
+    | in:IA32_in	{r=in;    pad=13;}
+    | out:IA32_out	{r=out;   pad=16;}
+    | invlpg:IA32_invlpg {r=invlpg; pad=6;}
+    | iret:IA32_iret	{r=iret;  pad=4;}
+    | lret:IA32_lret	{r=lret;  pad=4;}
+    | cpuid:IA32_cpuid	{r=cpuid; pad=6;}
+    | wrmsr:IA32_wrmsr	{r=wrmsr;}
+    | rdmsr:IA32_rdmsr	{r=rdmsr;}
+    | ia32_int:IA32_int	{r=ia32_int;}
+    | ud2:IA32_ud2	{r=ud2;}
+    | invd:IA32_invd	{r=invd;}
+    | wbinvd:IA32_wbinvd {r=wbinvd;}
+    | smsw:IA32_smsw	{r=smsw;}
+    | lmsw:IA32_lmsw	{r=lmsw;}
+    | arpl:IA32_arpl	{r=arpl;}
+    | lar:IA32_lar	{r=lar;}
+    | lsl:IA32_lsl	{r=lsl;}
+    | rsm:IA32_rsm	{r=rsm;}
+    | pop:IA32_pop	{r=pop; pad=5;}
+    | push:IA32_push	{r=push; pad=5;}
+    | mov:IA32_mov	{r=mov; pad=12;}
     ;
 
