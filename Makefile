@@ -48,6 +48,9 @@ test: $(O)/afterburner $(O)/AsmParser.s $(O)/AsmParser.afterburnt.s \
 
 ifdef rebuild_antlr
 
+.PHONY: compile-grammar
+compile-grammar: AsmParser.cpp
+
 AsmTreeParser.cpp AsmTreeParser.hpp: Asm.g
 AsmParser.cpp AsmParser.hpp: Asm.g
 AsmLexer.hpp AsmLexer.cpp: Asm.g

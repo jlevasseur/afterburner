@@ -298,6 +298,7 @@ COLON   : ':' ;
 protected DOT     : '.' ;
 protected PERCENT : '%' ;
 protected AT      : '@' ;
+protected HASH	  : '#' ;
 
 LPAREN		: '(' ;
 RPAREN		: ')' ;
@@ -319,6 +320,12 @@ Newline
 
 Whitespace
     : (' ' | '\t' | '\014')
+	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
+    ;
+
+Preprocessor
+    // #APP and #NO_APP surround inlined assembler.
+    : h:HASH { (h->getColumn() == 1) }? (~('\n'))*
 	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
     ;
 
