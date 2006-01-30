@@ -52,12 +52,14 @@ asmBasicBlock: asmLabel (asmStatement)+
 asmEnd: Newline! | SEMI! ;
 
 asmStatement
-    : asmInstrPrefix asmEnd
-    | asmInstr asmEnd
+    : /*asmInstrPrefix asmEnd
+    |*/ asmInstr asmEnd
     | asmCommand asmEnd
     | asmEnd
+    | asmAssignment
     ;
 
+asmAssignment : ID ASSIGN^ commandParam ;
 asmLabel : Label | LocalLabel ;
 
 asmMacroDefParams
@@ -140,7 +142,7 @@ regOffsetBase
     ;
 
 primitive
-    : ID | Int | Hex | Command | asmReg | Reg | RelativeLocation
+    : ID | Int | Hex | Command | asmReg | asmSegReg | Reg | RelativeLocation
     | (asmFpReg LPAREN) => asmFpReg LPAREN! Int RPAREN! 
           { ## = #([ASTRegisterIndex, "register index"], ##);}
     | asmFpReg
@@ -151,14 +153,20 @@ primitive
 signExpression
     : (m:MINUS^ {#m->setType(ASTNegative);})? primitive
     ;
+notExpression
+    : (NOT^)? signExpression
+    ;
 makeConstantExpression
-    : (DOLLAR^)? signExpression
+    : (DOLLAR^)? notExpression
+    ;
+shiftingExpression
+    : makeConstantExpression ((SHIFTLEFT^ | SHIFTRIGHT) makeConstantExpression)*
     ;
 multiplyingExpression
-    : makeConstantExpression ((STAR^|DIV^|"mod"^) makeConstantExpression)*
+    : shiftingExpression ((AND^|STAR^|DIV^|"mod"^) shiftingExpression)*
     ;
 addingExpression
-    : multiplyingExpression ((PLUS^|MINUS^) multiplyingExpression)*
+    : multiplyingExpression ((OR^|PLUS^|MINUS^) multiplyingExpression)*
     ;
 
 expression : addingExpression ;
@@ -178,7 +186,7 @@ asmReg
     ;
 asmFpReg : "%st" { ##->setType(ASTRegister); };
 asmSegReg
-    : ("%cs" | "%ds" | "%es" | "%fs" | "%gs")
+    : ("%cs" | "%ds" | "%es" | "%fs" | "%gs" | "%ss")
       { ##->setType(ASTRegister); }
     ;
 asmSensitiveReg
@@ -188,9 +196,11 @@ asmSensitiveReg
       { ##->setType(ASTRegister); }
     ;
 
+/*
 asmInstrPrefix
     : ("lock" | "rep")	{ ## = #([ASTInstructionPrefix, "prefix"], ##); }
     ;
+*/
 
 asmInnocuousInstr: ID;
 
@@ -311,6 +321,13 @@ LBRACKET	: '[' ;
 RBRACKET	: ']' ;
 LCURLY		: '{' ;
 RCURLY		: '}' ;
+ASSIGN		: '=' ;
+
+OR		: '|' ;
+AND		: '&' ;
+NOT		: '~' ;
+SHIFTLEFT	: '<''<' ;
+SHIFTRIGHT	: '>''>' ;
 
 PLUS		: '+' ;
 MINUS		: '-' ;
@@ -328,9 +345,16 @@ Whitespace
 	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
     ;
 
+/*
 Preprocessor
     // #APP and #NO_APP surround inlined assembler.
     : h:HASH { (h->getColumn() == 1) }? (~('\n'))*
+	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
+    ;
+*/
+
+AsmComment
+    : '#' ( ~('\n') )* 	// Don't swallow the newline.
 	{ $setType(ANTLR_USE_NAMESPACE(antlr)Token::SKIP); }
     ;
 
@@ -462,9 +486,14 @@ asmLabel
 asmStatementLine: asmStatement { std::cout << std::endl; } ;
 
 asmStatement
-    : asmInstrPrefix
-    | asmInstr
+    : /*asmInstrPrefix
+    |*/ asmInstr
     | asmCommand
+    | asmAssignment
+    ;
+
+asmAssignment
+    : #(ASSIGN l:.  { std::cout << l->getText() << '='; } expr) 
     ;
 
 asmCommand
@@ -549,12 +578,17 @@ subexpr
     | { ch('('); }    expr    { ch(')'); }
     ;
 
-expr { antlr::RefAST sr; }
+expr
     : #(p:PLUS  expr ({ crap(p); } expr)+)
     | #(m:MINUS expr ({ crap(m); } expr)+)
+    | #(o:OR   expr ({ crap(o); } expr)+)
+    | #(n:NOT {crap(n);} subexpr)
     | #(ASTNegative { ch('-'); } subexpr)
     | #(s:STAR   subexpr ({ crap(s); } subexpr)+)
     | #(d:DIV    subexpr ({ crap(d); } subexpr)+)
+    | #(a:AND    subexpr ({ crap(a); } subexpr)+)
+    | #(sl:SHIFTLEFT  subexpr ({ crap(sl); } subexpr)+ )
+    | #(sr:SHIFTRIGHT subexpr ({ crap(sr); } subexpr)+ )
     | #(m2:"mod"  subexpr ({ crap(m2); } subexpr)+)
     | #(D:DOLLAR { crap(D); } subexpr)
     | primitive
