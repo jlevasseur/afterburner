@@ -36,6 +36,7 @@ $(O)/%.o.s: $(O)/%.o
 
 ## Compare a normal binary to an afterburnt binary 
 .PHONY: test
+.PRECIOUS: $(O)/AsmParser.s $(O)/AsmParser.afterburnt.s
 test: $(O)/afterburner $(O)/AsmParser.s $(O)/AsmParser.afterburnt.s \
       $(O)/AsmParser.o $(O)/AsmParser.afterburnt.o
 	diff $(O)/AsmParser.o $(O)/AsmParser.afterburnt.o

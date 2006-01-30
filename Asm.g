@@ -85,7 +85,9 @@ asmCommand
     ;
 
 asmInstr { bool sensitive=false; }
-    : ( asmInnocuousInstr (instrParams)?  | sensitive = asmMaybeSensitive)
+    : ( asmInnocuousInstr (sensitive=instrParams)?  
+      | asmSensitiveInstr (instrParams)? { sensitive=true; } 
+      )
       {
         if( sensitive )
 	    ## = #([ASTSensitive, "sensitive instruction"], ##);
@@ -108,24 +110,25 @@ commandParams
 defaultParam: /* nothing */ { ## = #[ASTDefaultParam, "default"]; } ;
 commandParam: String | Option | instrParam;
 
-instrParams: instrParam (COMMA! instrParam)* ;
-instrParam : regExpression ;
+instrParams returns [bool s] { s=false; bool t; }
+    : s=instrParam (COMMA! t=instrParam { s|=t; })* ;
+instrParam returns [bool s] { s=false; } : s=regExpression ;
 
-regExpression: regDereferenceExpr ;
+regExpression returns [bool s] { s=false; } : s=regDereferenceExpr ;
 
-regDereferenceExpr
+regDereferenceExpr returns [bool sensitive] { sensitive=false; }
     : (s:STAR^			{#s->setType(ASTDereference);} )?
-      regSegmentExpr
+      sensitive=regSegmentExpr
     ;
-regSegmentExpr
+regSegmentExpr returns [bool s] { s=false; }
     : (asmSegReg c:COLON^	{#c->setType(ASTSegment);} )?
-      regDisplacementExpr
+      s=regDisplacementExpr
     ;
 
-regDisplacementExpr
+regDisplacementExpr returns [bool s] { s=false; }
     // section:disp(base, index, scale)  
     // where section, base, and index are registers.
-    : expression 
+    : s=expression 
       (regOffsetBase
           {## = #([ASTRegisterDisplacement, "register displacement"], ##);}
       )?
@@ -141,40 +144,42 @@ regOffsetBase
        ) {## = #([ASTRegisterBaseIndexScale, "register base index scale"], ##);}
     ;
 
-primitive
-    : ID | Int | Hex | Command | asmReg | asmSegReg | Reg | RelativeLocation
+primitive returns [bool s] { s=false; }
+    : ID | Int | Hex | Command | asmReg | Reg | RelativeLocation
+    | (asmSegReg | asmSensitiveReg) { s=true; }
     | (asmFpReg LPAREN) => asmFpReg LPAREN! Int RPAREN! 
           { ## = #([ASTRegisterIndex, "register index"], ##);}
     | asmFpReg
     | (LPAREN (asmReg|COMMA)) => regOffsetBase
-    | LPAREN! expression RPAREN!
+    | LPAREN! s=expression RPAREN!
     ;
 
-signExpression
-    : (m:MINUS^ {#m->setType(ASTNegative);})? primitive
+signExpression returns [bool s] { s=false; }
+    : (m:MINUS^ {#m->setType(ASTNegative);})? s=primitive
     ;
-notExpression
-    : (NOT^)? signExpression
+notExpression returns [bool s] { s=false; }
+    : (NOT^)? s=signExpression
     ;
-makeConstantExpression
-    : (DOLLAR^)? notExpression
+makeConstantExpression returns [bool s] { s=false; }
+    : (DOLLAR^)? s=notExpression
     ;
-shiftingExpression
-    : makeConstantExpression ((SHIFTLEFT^ | SHIFTRIGHT) makeConstantExpression)*
+multiplyingExpression returns [bool s] { s=false; bool t; }
+    : s=makeConstantExpression
+        ((STAR^|DIV^|PERCENT^) t=makeConstantExpression { s|=t; })*
     ;
-multiplyingExpression
-    : shiftingExpression ((AND^|STAR^|DIV^|"mod"^) shiftingExpression)*
+shiftingExpression returns [bool s] { s=false; bool t; }
+    : s=multiplyingExpression
+        ((SHIFTLEFT^ | SHIFTRIGHT) t=multiplyingExpression { s|=t; })*
     ;
-addingExpression
-    : multiplyingExpression ((OR^|PLUS^|MINUS^) multiplyingExpression)*
+bitwiseExpression returns [bool s] { s=false; bool t; }
+    : s=shiftingExpression ((AND^|OR^|XOR^) t=shiftingExpression { s|=t; })*
+    ;
+addingExpression returns [bool s] { s=false; bool t; }
+    : s=bitwiseExpression 
+        ((PLUS^|MINUS^) t=bitwiseExpression { s|=t; })*
     ;
 
-expression : addingExpression ;
-
-asmMaybeSensitive returns [bool sensitive] { sensitive=false; }
-    : asmSensitiveInstr (instrParams)? { sensitive=true; }
-    | sensitive=asmSensitiveRegInstr
-    ;
+expression returns [bool s] { s=false; } : s=addingExpression ;
 
 asmReg
     : ( "%al" | "%bl" | "%cl" | "%dl"
@@ -202,19 +207,7 @@ asmInstrPrefix
     ;
 */
 
-asmInnocuousInstr: ID;
-
-asmSensitiveRegInstr returns [bool sensitive] {sensitive=false;}
-    : ia32_pop  (asmSensitiveReg {sensitive=true;} | instrParam)
-    | ia32_push (asmSensitiveReg {sensitive=true;} | instrParam)
-    | ia32_mov
-        (
-	  (instrParam COMMA asmSensitiveReg) => 
-	    (instrParam COMMA! asmSensitiveReg)		{sensitive=true;}
-        | (asmSensitiveReg COMMA! instrParam)		{sensitive=true;}
-	| (instrParam COMMA! instrParam)
-	)
-    ;
+asmInnocuousInstr: ID | ia32_pop | ia32_push | ia32_mov;
 
 // We want instruction tokens, but via the string hash table, so 
 // build the tokens manually.  Recall that tokens start with a capital letter.
@@ -310,8 +303,8 @@ options {
 COMMA	: ',' ;
 SEMI	: ';' ;
 COLON   : ':' ;
+PERCENT : '%' ;
 protected DOT     : '.' ;
-protected PERCENT : '%' ;
 protected AT      : '@' ;
 protected HASH	  : '#' ;
 
@@ -323,6 +316,7 @@ LCURLY		: '{' ;
 RCURLY		: '}' ;
 ASSIGN		: '=' ;
 
+XOR		: '^' ;
 OR		: '|' ;
 AND		: '&' ;
 NOT		: '~' ;
@@ -589,7 +583,7 @@ expr
     | #(a:AND    subexpr ({ crap(a); } subexpr)+)
     | #(sl:SHIFTLEFT  subexpr ({ crap(sl); } subexpr)+ )
     | #(sr:SHIFTRIGHT subexpr ({ crap(sr); } subexpr)+ )
-    | #(m2:"mod"  subexpr ({ crap(m2); } subexpr)+)
+    | #(p2:PERCENT  subexpr ({ crap(p2); } subexpr)+)
     | #(D:DOLLAR { crap(D); } subexpr)
     | primitive
     | #(ASTDereference { std::cout << '*'; } expr)
