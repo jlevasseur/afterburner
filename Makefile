@@ -64,7 +64,7 @@ AsmLexer.hpp AsmLexer.cpp: Asm.g
 
 endif
 
-clean_antlr:
+clean-antlr:
 	-rm -f *.class
 	-rm -f *TokenTypes.txt *TokenTypes.hpp
 	-rm -f *Parser.hpp *Parser.cpp *Lexer.hpp *Lexer.cpp

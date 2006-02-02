@@ -1,6 +1,8 @@
-/* tutorial: http://javadude.com/articles/antlrtut/ */
 
 header "pre_include_hpp" {
+    // Copyright 2006 University of Karlsruhe.  See LICENSE.txt
+    // for licensing information.
+
     // Inserted before antlr generated includes in the header file.
     #include <iostream>
 }
@@ -9,6 +11,9 @@ header "post_include_hpp" {
     // outside any generated namespace specifications
 }
 header "pre_include_cpp" {
+    // Copyright 2006 University of Karlsruhe.  See LICENSE.txt
+    // for licensing information.
+
     // Inserted before the antlr generated includes in the cpp file
 }
 header "post_include_cpp" {
@@ -56,7 +61,7 @@ asmStatement
     |*/ asmInstr asmEnd
     | asmCommand asmEnd
     | asmEnd
-    | asmAssignment
+    | asmAssignment asmEnd
     ;
 
 asmAssignment : ID ASSIGN^ commandParam ;
@@ -160,16 +165,13 @@ signExpression returns [bool s] { s=false; }
 notExpression returns [bool s] { s=false; }
     : (NOT^)? s=signExpression
     ;
-makeConstantExpression returns [bool s] { s=false; }
-    : (DOLLAR^)? s=notExpression
-    ;
 multiplyingExpression returns [bool s] { s=false; bool t; }
-    : s=makeConstantExpression
-        ((STAR^|DIV^|PERCENT^) t=makeConstantExpression { s|=t; })*
+    : s=notExpression
+        ((STAR^|DIV^|PERCENT^) t=notExpression { s|=t; })*
     ;
 shiftingExpression returns [bool s] { s=false; bool t; }
     : s=multiplyingExpression
-        ((SHIFTLEFT^ | SHIFTRIGHT) t=multiplyingExpression { s|=t; })*
+        ((SHIFTLEFT^ | SHIFTRIGHT^) t=multiplyingExpression { s|=t; })*
     ;
 bitwiseExpression returns [bool s] { s=false; bool t; }
     : s=shiftingExpression ((AND^|OR^|XOR^) t=shiftingExpression { s|=t; })*
@@ -178,8 +180,11 @@ addingExpression returns [bool s] { s=false; bool t; }
     : s=bitwiseExpression 
         ((PLUS^|MINUS^) t=bitwiseExpression { s|=t; })*
     ;
+makeConstantExpression returns [bool s] { s=false; }
+    : (DOLLAR^)? s=addingExpression
+    ;
 
-expression returns [bool s] { s=false; } : s=addingExpression ;
+expression returns [bool s] { s=false; } : s=makeConstantExpression ;
 
 asmReg
     : ( "%al" | "%bl" | "%cl" | "%dl"
@@ -411,14 +416,16 @@ protected:
     unsigned pad;
     unsigned label_cnt;
     bool     in_macro;
+    bool     annotate_sensitive;
 
 public:
-    void init()
+    void init( bool do_annotations )
     {
         // We need a class init method because C++ constructors are useless.
         pad = 0;
 	in_macro = false;
 	label_cnt = 0;
+	annotate_sensitive = do_annotations;
     }
 
 protected:
@@ -429,17 +436,23 @@ protected:
 
     void startSensitive( antlr::RefAST s )
     {
-        // Add a label for the sensitive instruction block.
-        if( this->in_macro )
-	    std::cout << "9997:" << std::endl;
-	else
-            std::cout << ".L_sensitive_" << this->label_cnt << ":" << std::endl;
+        if( annotate_sensitive )
+	{
+            // Add a label for the sensitive instruction block.
+            if( this->in_macro )
+	        std::cout << "9997:" << std::endl;
+	    else
+                std::cout << ".L_sensitive_" << this->label_cnt << ":" << std::endl;
+	}
 	// Print the sensitive instruction.
 	std::cout << '\t' << s->getText();
     }
 
     void endSensitive( antlr::RefAST s )
     {
+        if( !annotate_sensitive )
+	    return;
+
         unsigned begin = this->label_cnt;
         unsigned end   = this->label_cnt+1;
         this->label_cnt += 2;
@@ -628,7 +641,7 @@ asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
     | cpuid:IA32_cpuid	{r=cpuid; pad=6;}
     | wrmsr:IA32_wrmsr	{r=wrmsr;}
     | rdmsr:IA32_rdmsr	{r=rdmsr;}
-    | ia32_int:IA32_int	{r=ia32_int;}
+    | ia32_int:IA32_int	{r=ia32_int; pad=11;}
     | ud2:IA32_ud2	{r=ud2;}
     | invd:IA32_invd	{r=invd;}
     | wbinvd:IA32_wbinvd {r=wbinvd;}

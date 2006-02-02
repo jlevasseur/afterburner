@@ -34,5 +34,7 @@
   giving good performance, but increasing the chance that I forget an
   instruction.  If I use a Lexer literal, then I can encode the AT&T
   instruction endings properly.
-- How can I avoid listing instructions where I want a general operation?
 
+
+Tutorial:
+   http://javadude.com/articles/antlrtut/
