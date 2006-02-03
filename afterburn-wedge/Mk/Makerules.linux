@@ -1,0 +1,11 @@
+
+
+LINUX_WEDGE=1
+
+INCLUDES_linux += 
+CXXFLAGS_linux  +=  -g -Ulinux
+CFLAGS_linux  +=  -g -Ulinux
+CCFLAGS += -Werror
+LIBDIRS_linux +=
+LIBS_linux += 
+

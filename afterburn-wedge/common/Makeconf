@@ -1,0 +1,4 @@
+
+SOURCES-$(CONFIG_BURN_COUNTERS) += common/burn_counters.cc
+SOURCES-$(CONFIG_INSTR_PROFILE) += common/profile.cc
+

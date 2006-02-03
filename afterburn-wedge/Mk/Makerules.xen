@@ -1,0 +1,15 @@
+
+INCLUDES_xen += $(subst ",,$(CONFIG_XEN_HYP_INCLUDE))
+
+INCLUDES_xen += $(XENHEADERS)
+CXXFLAGS_xen  +=  -g 
+CFLAGS_xen  +=  -g 
+CCFLAGS += -Werror -nostdlib -nostdinc
+LIBDIRS_xen +=
+LIBS_xen += 
+LD_BIN_FLAGS_xen += -Wl,-T$(SRCDIR)/xen/xen.lds
+
+burnxen:	$(SRCDIR)/linux/Makeconf $(SRCDIR)/xen/xen.lds $(BUILDDIR)/Makeconf.local $(OBJS)
+	@$(ECHO_MSG) Linking $@
+	@$(ECHO_MSG) using objects $(OBJS)
+	ld $(OBJS) -T$(SRCDIR)/xen/xen.lds `gcc -print-libgcc-file-name` -o $@

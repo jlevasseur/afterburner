@@ -1,0 +1,16 @@
+SOURCES += \
+	linux/main.cc \
+	linux/backend.cc  \
+	linux/child.cc \
+	linux/linux.cc \
+	linux/jump.S \
+	common/memory.cc \
+	common/elfsimple.cc \
+	common/hiostream.cc common/hconsole.cc \
+	$(ARCH)/burn.S 	$(ARCH)/rewrite_stackless.cc \
+	$(ARCH)/cpu.cc $(ARCH)/intlogic.cc \
+	$(ARCH)/bind.cc \
+	$(ARCH)/synchronous.cc \
+	device/portio.cc device/i8259a.cc device/mc146818rtc.cc \
+	device/i8253.cc device/8250.cc \
+	common/elf.c common/elf32.c common/elf64.c

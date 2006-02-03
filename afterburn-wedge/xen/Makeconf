@@ -1,0 +1,25 @@
+
+SOURCES_START = common/crtbegin.cc
+SOURCES_END = common/crtend.cc
+
+SOURCES += \
+	xen/head.S \
+	xen/entry.S \
+	xen/startup.cc \
+	xen/main.cc \
+	xen/backend.cc \
+	xen/linux.cc \
+	xen/synchronous.cc \
+	xen/trap.cc \
+	xen/vm.cc \
+	xen/burnxen.cc \
+	common/memory.cc \
+	$(ARCH)/cpu.cc \
+	$(ARCH)/bind.cc \
+	$(ARCH)/synchronous.cc \
+	$(ARCH)/intlogic.cc \
+	$(ARCH)/burn.S 	$(ARCH)/rewrite_stackless.cc \
+	device/portio.cc device/i8259a.cc device/mc146818rtc.cc \
+	device/i8253.cc device/8250.cc \
+	common/elfsimple.cc common/gcc_support.cc \
+	common/hiostream.cc common/hconsole.cc

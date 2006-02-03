@@ -1,0 +1,7 @@
+
+INCLUDES_rhype += 
+CXXFLAGS_rhype  +=  -g
+CFLAGS_rhype  +=  -g
+LIBDIRS_rhype +=
+LIBS_rhype += 
+
