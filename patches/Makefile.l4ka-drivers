@@ -1,0 +1,81 @@
+
+######################################################################
+##  Retrieve the driver reuse infrastructure from Mercurial.
+######################################################################
+receipts/hg-l4ka-drivers:
+	@echo Retrieving l4ka-driver-reuse from Hg.
+	$(Q) mkdir -p $(SRCDIR) receipts
+	$(Q) cd $(SRCDIR) && hg clone ssh://i30s5.ira.uka.de/hg/l4ka-driver-reuse
+	$(Q) touch $@
+
+receipts/hg-l4ka-vmctrl:
+	@echo Retrieving l4ka-vmctrl from Hg.
+	$(Q) mkdir -p $(SRCDIR) receipts
+	$(Q) cd $(SRCDIR) && hg clone ssh://i30s5.ira.uka.de/hg/l4ka-vmctrl
+	$(Q) touch $@
+
+######################################################################
+##  Build the driver reuse infrastructure.
+######################################################################
+help-build::
+	@echo "  build-l4ka-drivers"
+
+build-l4ka-drivers: build-l4ka-drivers-2.6-driver
+
+build-l4ka-drivers-2.6-driver: type=driver
+build-l4ka-drivers-2.6-i30pc30: type=i30pc30
+
+OPTS_l4ka-drivers = KBUILD_VERBOSE=0 \
+  CONFIG_L4KA_PISTACHIO_USER=$(INSTALL_ROOT) \
+  CONFIG_L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces \
+  O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type) \
+  M=$(SRCDIR)/l4ka-driver-reuse/linux \
+  $(OPTS_linux-2.6)
+
+build-l4ka-drivers-2.6-%: receipts/hg-l4ka-drivers build-linux-2.6-%
+	@echo Building L4Ka drivers, for $(UNPACK_linux-2.6)-$(type)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make $(OPTS_l4ka-drivers) modules)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make $(OPTS_l4ka-drivers) modules_install)
+
+clean-l4ka-drivers:
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make M=$(SRCDIR)/l4ka-driver-reuse/linux clean)
+
+
+######################################################################
+#  Build the driver init ROM disk.  Include insmod, init, and 
+#  the kernel modules.
+######################################################################
+
+help-build::
+	@echo "  build-rom-l4ka-drivers"
+
+build-rom-l4ka-drivers: build-rom-l4ka-drivers-2.6-driver
+
+build-rom-l4ka-drivers-2.6-driver: type=driver
+build-rom-l4ka-drivers-2.6-driver: $(BOOT_DIR)/rom-l4ka-drivers-2.6-driver.img.gz
+
+$(BOOT_DIR)/rom-l4ka-drivers-2.6-%.img.gz: $(BOOT_DIR)/rom-l4ka-drivers-2.6-%.img
+	$(Q) gzip -f $<
+
+PARTS_rom_l4ka_drivers = $(INSTALL_ROOT)/sbin/insmod \
+  $(INSTALL_ROOT)/sbin/l4ka-drivers-init $(INSTALL_ROOT)/sbin/l4ka-vm-loaded \
+  $(addprefix $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-%/extra/,l4ka_glue.ko l4ka_lanaddress.ko l4ka_net_server.ko)
+
+$(BOOT_DIR)/rom-l4ka-drivers-2.6-%.img: $(INSTALL_ROOT)/bin/genromfs $(PARTS_rom_l4ka_drivers)
+	@echo Generating $(@F)
+	$(Q) rm -rf $(BUILD_DIR)/rom-l4ka-drivers-2.6-$(type)
+	$(Q) mkdir -p $(BUILD_DIR)/rom-l4ka-drivers-2.6-$(type)
+	$(Q) cp $(subst %,$(type),$(PARTS_rom_l4ka_drivers)) $(BUILD_DIR)/rom-l4ka-drivers-2.6-$(type)/.
+	$(Q) genromfs -d $(BUILD_DIR)/rom-l4ka-drivers-2.6-$(type) -f $@
+
+$(INSTALL_ROOT)/sbin/l4ka-drivers-init: $(SRCDIR)/l4ka-driver-reuse/misc/l4ka-drivers-init.c receipts/hg-l4ka-drivers
+	$(Q) $(CC) -O2 -Wall -static $< -o $@
+	$(Q) strip $@
+
+$(INSTALL_ROOT)/sbin/l4ka-vm-loaded: receipts/hg-l4ka-vmctrl
+	$(Q) mkdir -p $(BUILD_DIR)/l4ka-vmctrl
+	$(Q) cd $(SRCDIR)/l4ka-vmctrl && make CONFIG_L4KA_PISTACHIO_USER=$(INSTALL_ROOT) CONFIG_L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces EXTRA_CFLAGS=-static O=$(BUILD_DIR)/l4ka-vmctrl clean
+	$(Q) cd $(SRCDIR)/l4ka-vmctrl && make CONFIG_L4KA_PISTACHIO_USER=$(INSTALL_ROOT) CONFIG_L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces EXTRA_CFLAGS=-static O=$(BUILD_DIR)/l4ka-vmctrl
+	$(Q) strip $(BUILD_DIR)/l4ka-vmctrl/l4ka-vm-loaded
+	$(Q) cp $(BUILD_DIR)/l4ka-vmctrl/l4ka-vm-loaded $@
+

@@ -1,0 +1,141 @@
+
+help-build::
+	@echo "  build-linux-2.6-xen0"
+	@echo "  build-linux-2.6-xen0-3"
+
+build-linux-2.6-xen0: build-linux-2.6-xen0-i30pc30
+build-linux-2.6-xen0-3: build-linux-2.6-xen0-3-i30pc30
+
+##
+## Configurations
+##
+
+build-linux-2.6-xen0-i30pc30: type=i30pc30
+build-linux-2.6-xen0-i30pc30: \
+  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-i30pc30 \
+  $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-i30pc30/extra/uka_perfmon.ko
+
+build-linux-2.6-xen0-i30pc62: type=i30pc62
+build-linux-2.6-xen0-i30pc62: \
+  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-i30pc62 \
+  $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-i30pc62/extra/uka_perfmon.ko
+
+build-linux-2.6-xen0-3-i30pc30: type=i30pc30
+build-linux-2.6-xen0-3-i30pc30: \
+  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-i30pc30 \
+  $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-i30pc30/extra/uka_perfmon.ko
+
+
+BUILD_linux-2.6-xen0 = $(BUILD_DIR)/$(UNPACK_linux-2.6)-xen0-$(VERSION_xen-2)
+BUILD_linux-2.6-xen0-3 = $(BUILD_DIR)/$(UNPACK_linux-2.6)-xen0-$(VERSION_xen-3)
+
+OPT_xen_pristine-2.0.2 = pristine-$(UNPACK_linux-2.6)
+OPT_xen_pristine-2.0.7 = pristine-$(UNPACK_linux-2.6)/.valid-pristine
+
+##
+##  Xen must build within the Linux source tree.  So tell Xen to stitch
+##  together a Linux 2.6 source tree with the Xen patches, in the build
+##  directory.
+##
+.PRECIOUS: receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%
+receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%: \
+  receipts/patch-xen-$(VERSION_xen-2) $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
+	@echo "Creating Linux build directory with patches for Xen $(VERSION_xen-2)"
+	$(Q) if [ -d $(BUILD_linux-2.6-xen0)-$(type) ] ; then echo "$(BUILD_linux-2.6-xen0)-$(type) already exists!" && exit 1 ; fi
+	$(Q) mkdir -p $(BUILD_DIR)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-2) && make -s LINUX_SRC_PATH=$(ARCHIVE_DIR) $(OPT_xen_pristine-$(VERSION_xen-2)))
+	$(Q) mv $(SRCDIR)/$(UNPACK_xen-2)/pristine-$(UNPACK_linux-2.6) $(BUILD_linux-2.6-xen0)-$(type)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-2)/$(UNPACK_linux-2.6)-xen-sparse && ./mkbuildtree $(BUILD_linux-2.6-xen0)-$(type))
+	$(Q) touch $@
+
+.PRECIOUS: receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-%
+receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-%: \
+  $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
+	@echo "Creating Linux build directory with patches for Xen $(VERSION_xen-3)"
+	$(Q) if [ -d $(BUILD_linux-2.6-xen0-3)-$(type) ] ; then echo "$(BUILD_linux-2.6-xen0-3)-$(type) already exists!" && exit 1 ; fi
+	$(Q) mkdir -p $(BUILD_DIR)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-3) && make LINUX_SRC_PATH=$(ARCHIVE_DIR) pristine-$(UNPACK_linux-2.6))
+	$(Q) mv $(SRCDIR)/$(UNPACK_xen-3)/pristine-$(UNPACK_linux-2.6) $(BUILD_linux-2.6-xen0-3)-$(type)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-3)/linux-2.6-xen-sparse && ./mkbuildtree $(BUILD_linux-2.6-xen0-3)-$(type))
+	$(Q) touch $@
+
+
+##
+##  Update the CONFIG_LOCALVERSION of the xen0 Linux .config file.
+##
+.PRECIOUS: $(BUILD_linux-2.6-xen0)-%/.config
+$(BUILD_linux-2.6-xen0)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6)-xen0-%
+	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-xen0-$(VERSION_xen-2)-$(type)"/g ; }' > $@
+
+.PRECIOUS: $(BUILD_linux-2.6-xen0-3)-%/.config
+$(BUILD_linux-2.6-xen0-3)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6)-xen0-3-%
+	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-xen0-$(VERSION_xen-3)-$(type)"/g ; }' > $@
+
+
+##
+##  Build the xen0 Linux and modules.
+##
+.PRECIOUS: $(BUILD_linux-2.6-xen0)-%/vmlinuz
+$(BUILD_linux-2.6-xen0)-%/vmlinuz: \
+  receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-% \
+  $(BUILD_linux-2.6-xen0)-%/.config
+	@echo "Building Linux in $(BUILD_linux-2.6-xen0)-$(type)"
+	$(Q) (cd $(BUILD_linux-2.6-xen0)-$(type) && make ARCH=xen)
+	$(Q) if grep CONFIG_MODULES=y $(BUILD_linux-2.6-xen0)-$(type)/.config ; then cd $(BUILD_linux-2.6-xen0)-$(type) && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) modules_install ; fi
+
+.PRECIOUS: $(BUILD_linux-2.6-xen0-3)-%/vmlinuz
+$(BUILD_linux-2.6-xen0-3)-%/vmlinuz: \
+  receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-% \
+  $(BUILD_linux-2.6-xen0-3)-%/.config
+	@echo "Building Linux in $(BUILD_linux-2.6-xen0-3)-$(type)"
+	$(Q) (cd $(BUILD_linux-2.6-xen0-3)-$(type) && make ARCH=xen)
+	$(Q) if grep CONFIG_MODULES=y $(BUILD_linux-2.6-xen0-3)-$(type)/.config ; then cd $(BUILD_linux-2.6-xen0-3)-$(type) && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) modules_install ; fi
+
+
+##
+##  Install the vmlinuz file into the boot directory.
+##
+$(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%: $(BUILD_linux-2.6-xen0)-%/vmlinuz
+	$(Q) mkdir -p $(BOOT_DIR)
+	$(Q) cp $< $@
+
+$(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-%: $(BUILD_linux-2.6-xen0-3)-%/vmlinuz
+	$(Q) mkdir -p $(BOOT_DIR)
+	$(Q) cp $< $@
+
+
+##
+##  Run 'make menuconfig' for the relevant linux.
+##
+reconfig-linux-2.6-xen0-%:
+	$(Q) (cd $(BUILD_linux-2.6-xen0)-$(subst reconfig-linux-2.6-xen0-,,$@) && make ARCH=xen menuconfig)
+
+##
+##  Build a UKa Perfmon module, compatible with the xen0 kernel.
+##
+$(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%/extra/uka_perfmon.ko: \
+  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%
+	@echo "Building the UKa perfmon module: $@"
+	$(Q) (cd $(BUILD_linux-2.6-xen0)-$(type) && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon clean)
+	$(Q) (cd $(BUILD_linux-2.6-xen0)-$(type) && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon CFLAGS='-DCONFIG_UKA_PERFMON_H="<$(SRCDIR)/$(MARZIPAN_CVS)/$(RESOURCEMON_CVS)/include/ia32/perfmon.h>"')
+	$(Q) (cd $(BUILD_linux-2.6-xen0)-$(type) && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon modules_install)
+
+######################################################################
+#
+#  GRUB boot menu
+# 
+######################################################################
+
+create-grub-xen-menu: g=$(BOOT_DIR)/xen.lst
+create-grub-xen-menu: create-grub-xen-header create-grub-xen-body
+create-grub-xen-header::
+	@echo "# Automatically generated file.  Changes will be lost." > $(g)
+create-grub-xen-body:: \
+	grub-xen-linux-i30pc30 grub-xen-linux-i30pc62
+
+grub-xen-linux-%:
+	@echo >> $(g)
+	@echo "title = $(subst grub-xen-linux-,,$@): XenoLinux" >> $(g)
+	@echo "kernel = $(GRUB_BOOT)/xen-$(VERSION_xen-2).gz dom0_mem=$(VMSIZE) com1=115200,8n1" >> $(g)
+	@echo "module = $(GRUB_BOOT)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-$(subst grub-xen-linux-,,$@) $(LINUX_BOOT_PARAMS)" >> $(g)
+

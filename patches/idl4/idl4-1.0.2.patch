@@ -1,0 +1,45 @@
+--- idl4-1.0.2/src/cast/cast.cc	2003-08-25 04:41:22.000000000 +0000
++++ i/src/cast/cast.cc	2005-06-03 22:44:01.000000000 +0000
+@@ -427,15 +427,15 @@
+ void CASTIntegerConstant::write()
+ 
+ {
+-  enter("integer constant: %Ld", value);
++  enter("integer constant: %lld", value);
+ 
+   if (isUnsigned)
+-    print("%Ldu", value);
+-    else print("%d", value);
++    print("%llu", value);
++    else print("%lld", value);
+   if (isLong)
+     print("l");
+   
+-  leave("integer constant: %Ld", value);
++  leave("integer constant: %lld", value);
+ }
+ 
+ void CASTStringConstant::write()
+@@ -804,18 +804,18 @@
+ void CASTHexConstant::write()
+ 
+ {
+-  enter("hex constant: 0x%LX", value);
++  enter("hex constant: 0x%llX", value);
+ 
+   if (value>1)
+-    print("0x%LX", value);
+-    else print("%d", value);
++    print("0x%llX", value);
++    else print("%lld", value);
+ 
+   if (isUnsigned)
+     print("u");
+   if (isLong)
+     print("l");
+     
+-  leave("hex constant: 0x%LX", value);
++  leave("hex constant: 0x%llX", value);
+ }
+ 
+ void CASTAsmStatement::write()

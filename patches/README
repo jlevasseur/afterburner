@@ -1,0 +1,27 @@
+
+Execute 'make' to get help for automatically applying the patches, and
+for building everything.  The automated process retrieves the source
+archives from the Internet, unarchives them, and applies the patches.
+It can also build the components.
+
+Alternatively, to manually apply the patches, change into the source
+directory of the target, and then execute the patch command with the
+options -Np1
+
+The URLs that we used for retrieving our source archives, for generating 
+the patches, are listed in the file SOURCES.
+
+For more detailed information, consult "The Afterburner User Manual",
+which is located in the afterburner/afterburn-wedge/doc directory.
+
+Several of the projects have make rules for reconfiguring and rebuilding.
+Some examples:
+   make reconfig-linux-2.6-driver
+   make reconfig-linux-2.6-vmi-driver
+   make reconfig-wedge-l4ka-passthru
+   make reconfig-wedge-kaxen-vmi-passthru
+   make rebuild-linux-2.6-driver
+   make rebuild-linux-2.6-vmi-driver
+   make rebuild-wedge-l4ka-passthru
+   make rebuild-wedge-kaxen-vmi-passthru
+

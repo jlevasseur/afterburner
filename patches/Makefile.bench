@@ -1,0 +1,185 @@
+
+##  Expected network topology:
+##    SUT - system under test.
+##    CLIENT - the system running support programs to test network performance.
+##  The SUT and CLIENT each have two ethernet adapters.  One set of adapters
+##  attach to the normal network, and use normal hostnames.  They correspond
+##  to the variables SUT and CLIENT.  The second set of adapters attach
+##  to a dedicated gigabit switch, the fast network.  The variable names are
+##  SUT_fast and CLIENT_fast.  We use a 10.0.0.0/24 addressing for the fast
+##  network (i.e., netmask is 255.0.0.0).  Examples: 
+##    10.30.0.1 - the first virtual machine on i30pc30
+##    10.30.0.2 - the second virtual machine on i30pc30
+##    10.62.0.1 - the first virtual machine on i30pc62
+
+##  Performance monitoring:
+##   Currently, the native and Xen systems must load a kernel module, named
+##   uka_perfmon.ko, to enable performance monitors.  The Xen hypervisor
+##   must be patched to enable access to the performance monitors from user
+##   level.  For L4Ka, Marzipan configures the performance counters, and thus
+##   uka_perfmon.ko is superfluous.  But Pistachio must be patched to enable
+##   access to the performance monitors from user level.
+
+
+SUT ?= i30pc30
+SUT_fast ?= 10.30.0.1
+SUT_user ?= $(USER)
+CLIENT ?= i30pc48
+CLIENT_fast ?= 10.48.0.1
+
+## Additional programs to execute prior to a benchmark.
+PREBENCH ?= true
+## Additional programs to execute after a benchmark.
+POSTBENCH ?= true
+## The additional programs might dump the burn counters for example.
+
+##  Destination for suplemental output from the benchmarks.
+LOG ?= benchmarks.log
+##  Number of times to repeat an experiment.
+REPEAT ?= 1
+
+######################################################################
+##  Configuration of the remote machines.
+##
+##  install-remote-modules
+##    Execute this rule to install the latest kernel modules on the 
+##    test machines.  The installation preserves the timestamps of
+##    the files.
+##
+##  install-remote-benchmarks
+##    Execute this rule to install the latest benchmarks on the test
+##    machines.  The installation preserves the timestamps of the 
+##    files.
+######################################################################
+module_sets = $(VERSION_linux-2.6)-afterburn-$(SUT) \
+  $(VERSION_linux-2.6)-afterburn-$(SUT)-native \
+  $(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-$(SUT) \
+  2.6.8.1-L4Ka-$(SUT) $(VERSION_linux-2.6-vmi)-vmi-$(SUT) \
+  $(VERSION_linux-2.6-vmi)-vmi-$(SUT)-native
+
+.PHONY: install-remote-modules
+install-remote-modules:
+	@echo "Copying kernel modules to $(SUT)"
+	$(Q) for mdset in $(module_sets) ; do \
+	  echo $$mdset ; \
+	  rm -f $(INSTALL_ROOT)/lib/modules/$$mdset/build > /dev/null ; \
+	  rm -f $(INSTALL_ROOT)/lib/modules/$$mdset/source > /dev/null ; \
+	  scp -B -p -r $(INSTALL_ROOT)/lib/modules/$$mdset root@$(SUT):/lib/modules/. ; \
+	done
+
+.PHONE: install-remote-benchmarks
+install-remote-benchmarks: benchmarks = $(INSTALL_ROOT)/bin/netperf \
+  $(INSTALL_ROOT)/bin/netserver $(INSTALL_ROOT)/bin/perfmon \
+  $(INSTALL_ROOT)/bin/perfsweep
+install-remote-benchmarks:
+	@echo "Installing benchmarks on $(SUT)"
+	-$(Q) ssh $(SUT) "killall netserver"
+	$(Q) scp -B -p $(benchmarks) $(SUT):bench/.
+	@echo "Installing benchmarks on $(CLIENT)"
+	-$(Q) ssh $(CLIENT) "killall netserver"
+	$(Q) scp -B -p $(benchmarks) $(CLIENT):bench/.
+
+
+######################################################################
+#  Initialization of the remote machines.
+#
+#  benchmarks-init
+#    Execute this rule to cause initialization of the performance
+#    counters, and to print a small summary of the active configurations
+#    of the remote machines, such as kernel version, RAM size, etc.
+######################################################################
+
+perfmon_disk_KaXen = modprobe uka_perfmon
+perfmon_disk_Intel(R) = modprobe uka_perfmon
+
+.PHONY: benchmarks-init
+benchmarks-init: sut_kernel=$(shell ssh root@$(SUT) uname --release)
+benchmarks-init: client_kernel=$(shell ssh root@$(CLIENT) uname --release)
+benchmarks-init: hypervisor=$(word 1,$(shell ssh root@$(SUT) 'grep "model name" /proc/cpuinfo | sed "s/.*: //"'))
+benchmarks-init: sut_cpu_mhz=$(shell ssh root@$(SUT) 'grep "cpu MHz" /proc/cpuinfo | sed "s/.*: //"')
+benchmarks-init: client_cpu_mhz=$(shell ssh root@$(CLIENT) 'grep "cpu MHz" /proc/cpuinfo | sed "s/.*: //"')
+benchmarks-init: sut_mem_kb=$(word 1,$(strip $(shell ssh root@$(SUT) 'grep MemTotal /proc/meminfo | sed "s/.*://"')))
+benchmarks-init: client_mem_kb=$(word 1,$(strip $(shell ssh root@$(CLIENT) 'grep MemTotal /proc/meminfo | sed "s/.*://"')))
+benchmarks-init:
+	@echo "$(SUT) kernel, $(sut_kernel)"
+	@echo "$(SUT) hypervisor, $(hypervisor)"
+	@echo "$(SUT) CPU MHz, $(sut_cpu_mhz)"
+	@echo "$(SUT) total mem KB, $(sut_mem_kb)"
+	@echo "$(CLIENT) kernel, $(client_kernel)"
+	@echo "$(CLIENT) CPU MHz, $(client_cpu_mhz)"
+	@echo "$(CLIENT) total mem KB, $(client_mem_kb)"
+	$(Q) if [ -n "$(perfmon_disk_$(hypervisor))" ] ; then ssh root@$(SUT) $(perfmon_disk_$(hypervisor)) ; fi
+
+
+######################################################################
+##  Benchmarks
+##
+##  benchmark-netserver
+##    Tests the performance of netperf receive on the SUT.
+##  benchmark-netperf
+##    Tests the performance of netperf send on the SUT.
+##  benchmark-kernel-build
+##    Test the performance of building a Linux kernel.
+######################################################################
+
+.PHONY: benchmark-netserver
+benchmark-netserver:
+	@echo "Netperf receive benchmark"
+	$(Q) date >> $(LOG)
+	-$(Q) ssh $(SUT) "killall netserver"
+	$(Q) ssh $(SUT) "nohup ./bench/netserver >& /tmp/netserver &"
+	$(Q) for N in $$(seq 1 $(REPEAT)) ; do \
+	  echo "Client netperf results:" >> $(LOG) \
+	  && ssh $(CLIENT) "./bench/netperf -H $(SUT_fast) -l -1073741824 -- -m 32768 -M 32768 -s 262144 -S 262144" >> $(LOG) \
+	  && echo "SUT netserver results:" >> $(LOG) \
+	  && ssh $(SUT) "cat /tmp/netserver" >> $(LOG) \
+	  && ssh $(SUT) "tail -n 1 /tmp/netserver" \
+	  ; done
+
+.PHONY: benchmark-netperf
+benchmark-netperf:
+	@echo "Netperf send benchmark"
+	$(Q) date >> $(LOG)
+	-$(Q) ssh $(CLIENT) "killall netserver"
+	$(Q) ssh $(CLIENT) "nohup ./bench/netserver >& /tmp/netserver &"
+	$(Q) for N in $$(seq 1 $(REPEAT)) ; do \
+	  echo "SUT netperf results:" >> $(LOG) \
+	  && ssh $(SUT_user)@$(SUT) "$(PREBENCH) && /home/jtl/bench/netperf -H $(CLIENT_fast) -l -1073741824 -- -m 32768 -M 32768 -s 262144 -S 262144 >& /tmp/netperf && $(POSTBENCH)" \
+	  && ssh $(SUT_user)@$(SUT) "cat /tmp/netperf" >> $(LOG) \
+	  && ssh $(SUT_user)@$(SUT) "cat /tmp/netperf | head -n 4 | tail -n 1" \
+	  && ssh $(SUT_user)@$(SUT) "rm -f /tmp/netperf" \
+	  && echo "Client netserver results:" >> $(LOG) \
+	  && ssh $(CLIENT) "cat /tmp/netserver" >> $(LOG) \
+	  ; done
+
+.PHONY: benchmark-kernel-build
+benchmark-kernel-build:
+	@echo "Kernel build benchmark"
+	$(Q) for N in $$(seq 1 $(REPEAT)) ; do \
+	  ssh $(SUT_user)@$(SUT) "cd /tmp && rm -rf bench && mkdir -p bench/linux-2.6.9" \
+	  && scp ../afterburn-wedge/doc/linux-2.6/dot-config-2.6.9-benchmark $(SUT_user)@$(SUT):/tmp/bench/linux-2.6.9/.config >> $(LOG) \
+	  && scp $(ARCHIVE_DIR)/linux-2.6.9.tar.bz2 $(SUT_user)@$(SUT):/tmp/bench/. >> $(LOG) \
+	  && ssh $(SUT_user)@$(SUT) "cd /tmp/bench && tar jxf linux-2.6.9.tar.bz2" \
+	  && ssh $(SUT_user)@$(SUT) "$(PREBENCH) && ~jtl/bench/perfmon 'cd /tmp/bench/linux-2.6.9 && make oldconfig >& /dev/null && make >& /dev/null' | tail -n 1 && $(POSTBENCH)" \
+	  ; done
+
+
+######################################################################
+##  Misc
+######################################################################
+
+#perfmon_ramdisk_L4Ka::Pistachio = 
+#perfmon_ramdisk_KaXen = ./insmod ./uka_perfmon.ko
+
+.PHONY: install-ramdisk
+install-ramdisk: kernel=$(shell ssh root@$(SUT) uname --release)
+install-ramdisk: hypervisor=$(word 1,$(shell ssh root@$(SUT) 'grep "model name" /proc/cpuinfo | sed "s/.*: //"'))
+install-ramdisk:
+	@echo "$(SUT) kernel: $(kernel)"
+	@echo "$(SUT) hypervisor: $(hypervisor)"
+	$(Q) scp -B -p -r $(INSTALL_ROOT)/sbin/insmod $(INSTALL_ROOT)/lib/modules/$(kernel)/extra/uka_perfmon.ko root@$(SUT):.
+	$(Q) scp -B -p -r $(INSTALL_ROOT)/bin/netperf $(INSTALL_ROOT)/bin/netserver root@$(SUT):.
+	$(Q) if [ -n "$(perfmon_ramdisk_$(hypervisor))" ] ; then ssh root@$(SUT) $(perfmon_ramdisk_$(hypervisor)) ; fi
+
+
+

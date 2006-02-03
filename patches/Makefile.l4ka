@@ -1,0 +1,258 @@
+
+-include Makefile.l4ka-drivers
+-include Makefile.xen
+-include Makefile.bench
+
+receipts/cvs-marzipan-benchmark: receipts/cvs-marzipan
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d -l benchmarks
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d -l benchmarks/kmod
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d -l benchmarks/contrib
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d -l benchmarks/src
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/contrib/netperf
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/contrib/ttcp
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/contrib/postmark
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/src/microdisk
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/src/perfmon
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/kmod/perfmon
+	$(Q) echo '#include "$(SRCDIR)/$(MARZIPAN_CVS)/hypervisor/include/ia32/perfmon.h"' > $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon/perfmon_config.h
+	$(Q) touch $@
+
+receipts/cvs-marzipan-l4ka-linux: receipts/cvs-marzipan
+	@echo Retrieving L4Ka::Linux 2.6 from CVS.
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS)/interfaces && cvs -Q update -r dp83820 L4VMnet_idl.idl
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d l4ka-linux-2.6
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS)/l4ka-linux-2.6/drivers/l4mlx && cvs -Q update -d -r dp83820 linuxnet
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d -l benchmarks
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d -l benchmarks/configs
+	$(Q) cd $(SRCDIR)/$(MARZIPAN_CVS) && cvs -Q update -d benchmarks/configs/linux-2.6
+	$(Q) touch $@
+
+
+help-build::
+	@echo "  build-benchmarks"
+
+build-benchmarks: build-netperf build-ttcp build-postmark build-microdisk
+
+######################################################################
+#
+#  Netperf Benchmark
+#
+######################################################################
+
+build-netperf: $(INSTALL_ROOT)/bin/netserver $(INSTALL_ROOT)/bin/netperf
+
+$(INSTALL_ROOT)/bin/%: $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/netperf/%
+	$(Q) cp $< $@
+
+$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/netperf/netperf \
+$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/netperf/netserver: \
+		receipts/cvs-marzipan-benchmark
+	$(Q) (cd $(@D) && make -s)
+
+
+######################################################################
+#
+#  ttcp Benchmark
+#
+######################################################################
+
+build-ttcp: $(INSTALL_ROOT)/bin/ttcp
+
+$(INSTALL_ROOT)/bin/ttcp: $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/ttcp/ttcp
+	$(Q) cp $< $@
+
+$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/ttcp/ttcp: \
+		receipts/cvs-marzipan-benchmark
+	$(Q) (cd $(@D) && make -s)
+
+
+######################################################################
+#
+#  PostMark Benchmark
+#
+######################################################################
+
+build-postmark: $(INSTALL_ROOT)/bin/postmark
+
+$(INSTALL_ROOT)/bin/postmark: $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/postmark/postmark
+	$(Q) cp $< $@
+
+$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/contrib/postmark/postmark: \
+		receipts/cvs-marzipan-benchmark
+	$(Q) (cd $(@D) && make -s)
+
+
+######################################################################
+#
+#  Microdisk Benchmark
+#
+######################################################################
+
+build-microdisk: $(INSTALL_ROOT)/bin/microdisk
+
+$(INSTALL_ROOT)/bin/microdisk: $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/src/microdisk/microdisk
+	$(Q) cp $< $@
+
+$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/src/microdisk/microdisk: \
+		receipts/cvs-marzipan-benchmark
+	$(Q) (cd $(@D) && make -s)
+
+
+######################################################################
+#
+#  perfmon command-line utilities
+#
+######################################################################
+
+build-perfmon: $(INSTALL_ROOT)/bin/perfmon $(INSTALL_ROOT)/bin/perfsweep
+
+$(INSTALL_ROOT)/bin/perfmon: $(BUILD_DIR)/perfmon/perfmon
+	$(Q) cp $< $@
+$(INSTALL_ROOT)/bin/perfsweep: $(BUILD_DIR)/perfmon/perfsweep
+	$(Q) cp $< $@
+
+$(BUILD_DIR)/perfmon/%:
+	$(Q) mkdir -p $(BUILD_DIR)/perfmon
+	$(Q) (cd $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/src/perfmon && make -s O=$(BUILD_DIR)/perfmon $@)
+
+######################################################################
+#
+#  Standard Linux
+#
+######################################################################
+
+help-build::
+	@echo "  build-linux-2.6 type=<i30pc48-native | i30pc30-native | i30pc62-native | i30pc30 | i30pc30-large>"
+	@echo "  build-linux-2.6-vmi type=<i30pc30 | i30pc30-native>"
+
+modules_linux-2.6-i30pc48-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc48-native/extra/uka_perfmon.ko
+modules_linux-2.6-i30pc30-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30-native/extra/uka_perfmon.ko
+modules_linux-2.6-i30pc62-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc62-native/extra/uka_perfmon.ko
+
+modules_linux-2.6-i30pc30 = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30/extra/uka_perfmon.ko
+modules_linux-2.6-i30pc30-large = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30-large/extra/uka_perfmon.ko
+
+modules_linux-2.6-vmi-i30pc30 = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-i30pc30/extra/uka_perfmon.ko
+modules_linux-2.6-vmi-i30pc30-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-i30pc30-native/extra/uka_perfmon.ko
+
+######################################################################
+#
+#  UKa Perfmon
+#
+######################################################################
+
+$(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-%/extra/uka_perfmon.ko: \
+  $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinux \
+  receipts/cvs-marzipan-benchmark
+	@echo "Building the UKa perfmon module: $@"
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(<D) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon $(OPTS_linux-2.6) clean)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(<D) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon CFLAGS='-DCONFIG_UKA_PERFMON_H="<$(SRCDIR)/$(MARZIPAN_CVS)/$(RESOURCEMON_CVS)/include/ia32/perfmon.h>"' $(OPTS_linux-2.6))
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(<D) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon $(OPTS_linux-2.6) modules_install)
+
+$(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-%/extra/uka_perfmon.ko: \
+  $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux \
+  receipts/cvs-marzipan-benchmark
+	@echo "Building the UKa perfmon module: $@"
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(<D) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon $(OPTS_linux-2.6) clean)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(<D) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon CFLAGS='-DCONFIG_UKA_PERFMON_H="<$(SRCDIR)/$(MARZIPAN_CVS)/$(RESOURCEMON_CVS)/include/ia32/perfmon.h>" -Iinclude/asm-i386/mach-vmi -Iinclude/asm-i386/mach-default' $(OPTS_linux-2.6))
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(<D) M=$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/kmod/perfmon $(OPTS_linux-2.6) modules_install)
+
+
+
+######################################################################
+#
+#  l4ka-linux-2.6
+#
+######################################################################
+
+help-build::
+	@echo "  build-l4ka-linux"
+
+build-l4ka-linux: build-l4ka-linux-composite build-l4ka-linux-solo build-l4ka-linux-l4ka-i30pc30
+
+build-l4ka-linux-composite: type=composite
+build-l4ka-linux-composite: $(BOOT_DIR)/l4ka-linux-composite
+
+build-l4ka-linux-solo: type=solo
+build-l4ka-linux-solo: $(BOOT_DIR)/l4ka-linux-solo
+
+build-l4ka-linux-i30pc30: type=i30pc30
+build-l4ka-linux-i30pc30: $(BOOT_DIR)/l4ka-linux-i30pc30
+
+OPTS_l4ka-linux += INSTALL_MOD_PATH=$(INSTALL_ROOT)
+ifdef TOOLPREFIX
+OPTS_l4ka-linux += ARCH=$(TARGET_ARCH) CROSS_COMPILE=$(TOOLPREFIX)
+endif
+ifeq ($(HOST_PLATFORM),Darwin)
+OPTS_l4ka-linux += HOSTCC="cc -no-cpp-precomp"
+endif
+
+$(BOOT_DIR)/l4ka-linux-%: $(BUILD_DIR)/l4ka-linux-%/vmlinuz
+	$(Q) mkdir -p $(BOOT_DIR)
+	$(Q) cp $< $@
+	$(Q) $(BOOT_INSTALL_CMD)
+
+$(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/configs/linux-2.6/dot-config-%: receipts/cvs-marzipan-l4ka-linux
+
+.PRECIOUS: $(BUILD_DIR)/l4ka-linux-%/.config
+$(BUILD_DIR)/l4ka-linux-%/.config: $(SRCDIR)/$(MARZIPAN_CVS)/benchmarks/configs/linux-2.6/dot-config-%
+	$(Q) mkdir -p $(@D)
+	$(Q) cat $< | sed -e '{ s/CONFIG_X86_L4V4_USER_DIR=.*/CONFIG_X86_L4V4_USER_DIR="$(subst /,\/,$(BUILD_DIR)/pistachio-user)"/g ; s/CONFIG_X86_L4V4_IDL_DIR=.*/CONFIG_X86_L4V4_IDL_DIR="$(subst /,\/,$(SRCDIR)/$(MARZIPAN_CVS)/interfaces)"/g ; }' > $@
+
+.PRECIOUS: $(BUILD_DIR)/l4ka-linux-%/vmlinuz
+$(BUILD_DIR)/l4ka-linux-%/vmlinuz: $(BUILD_DIR)/l4ka-linux-%/.config
+	@echo Building L4Ka::Linux in $(BUILD_DIR)/l4ka-linux-$(type)
+	$(Q) (cd $(SRCDIR)/$(MARZIPAN_CVS)/l4ka-linux-2.6 && make O=$(BUILD_DIR)/l4ka-linux-$(type) $(OPTS_l4ka-linux) LOCALVERSION=-$(type))
+	$(Q) if grep CONFIG_MODULES=y $(BUILD_DIR)/l4ka-linux-$(type)/.config ; then cd $(SRCDIR)/$(MARZIPAN_CVS)/l4ka-linux-2.6 && make O=$(BUILD_DIR)/l4ka-linux-$(type) $(OPTS_l4ka-linux) LOCALVERSION=-$(type) modules_install ; fi
+
+reconfig-l4ka-linux-%: $(BUILD_DIR)/l4ka-linux-%/.config
+	$(Q) (cd $(SRCDIR)/$(MARZIPAN_CVS)/l4ka-linux-2.6 && make O=$(BUILD_DIR)/l4ka-linux-$(subst reconfig-l4ka-linux-,,$@) $(OPTS_l4ka-linux) menuconfig)
+
+
+######################################################################
+#  Wedge
+######################################################################
+
+build-wedge-l4ka-ddos: type=l4ka-ddos
+build-wedge-l4ka-ddos: build-wedge-l4ka-prereqs \
+  $(BOOT_DIR)/afterburn-wedge-l4ka-ddos
+OPTS_wedge-l4ka-ddos = WEDGE_L4KA SMP=n DEVICE_PASSTHRU=n DEVICE_DP83820=y \
+  GUEST_PTE_HOOK=n L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces \
+  L4KA_PISTACHIO_USER=$(INSTALL_ROOT)
+
+######################################################################
+#
+#  GRUB boot menu
+#
+######################################################################
+
+create-grub-ddos-menu: g=$(BOOT_DIR)/ddos.lst
+create-grub-ddos-menu: create-grub-ddos-header create-grub-ddos-body
+create-grub-ddos-header::
+	@echo "# Automatically generated file.  Changes will be lost." > $(g)
+create-grub-ddos-body:: \
+  grub-l4ka-linux-solo-p4 grub-l4ka-linux-solo-qemu \
+  grub-l4ka-linux-composite-p4 grub-l4ka-linux-composite-qemu
+
+grub-l4ka-linux-solo-%:
+	@echo >> $(g)
+	@echo "title = $(subst grub-l4ka-linux-solo-,,$@): L4Ka::Linux solo" >> $(g)
+	@echo "kernel = $(GRUB_BOOT)/kickstart" >> $(g)
+	@echo "module = $(GRUB_BOOT)/$(subst grub-l4ka-linux-solo,pistachio,$@)" >> $(g)
+	@echo "module = $(GRUB_BOOT)/sigma0" >> $(g)
+	@echo "module = $(GRUB_BOOT)/marzipan" >> $(g)
+	@echo "module = $(GRUB_BOOT)/l4ka-linux-solo offset=2G vmsize=$(VMSIZE)K $(LINUX_BOOT_PARAMS)" >> $(g)
+
+
+grub-l4ka-linux-composite-%:
+	@echo >> $(g)
+	@echo "title = $(subst grub-l4ka-linux-composite-,,$@): Afterburnt Linux with L4Ka::Linux composite drivers" >> $(g)
+	@echo "kernel = $(GRUB_BOOT)/kickstart" >> $(g)
+	@echo "module = $(GRUB_BOOT)/$(subst grub-l4ka-linux-composite,pistachio,$@)" >> $(g)
+	@echo "module = $(GRUB_BOOT)/sigma0" >> $(g)
+	@echo "module = $(GRUB_BOOT)/marzipan" >> $(g)
+	@echo "module = $(GRUB_BOOT)/l4ka-linux-composite offset=2G vmsize=20M ddos console=l4tty root=/dev/ram0 init=/sleeping_init" >> $(g)
+	@echo "modulenounzip = $(GRUB_BOOT)/sleeping_init.img.gz" >> $(g)
+	@echo "module = $(GRUB_BOOT)/afterburn-wedge-l4ka-ddos vmstart vmsize=$(VMSIZE)K wedgeinstall=16M wedgesize=16M" >> $(g)
+	@echo "module = $(GRUB_BOOT)/vmlinuz-2.6.9-guest $(LINUX_BOOT_PARAMS)" >> $(g)
+
