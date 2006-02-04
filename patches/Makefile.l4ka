@@ -122,18 +122,26 @@ $(BUILD_DIR)/perfmon/%:
 ######################################################################
 
 help-build::
-	@echo "  build-linux-2.6 type=<i30pc48-native | i30pc30-native | i30pc62-native | i30pc30 | i30pc30-large>"
-	@echo "  build-linux-2.6-vmi type=<i30pc30 | i30pc30-native>"
+	@echo "  build-linux-2.6"
+	@echo "    build-linux-2.6-i30pc48-native"
+	@echo "    build-linux-2.6-i30pc30-native"
+	@echo "    build-linux-2.6-i30pc62-native"
+	@echo "    build-linux-2.6-i30pc30"
+	@echo "    build-linux-2.6-i30pc30-native"
+	@echo "    build-linux-2.6-i30pc30-large"
+	@echo "  build-linux-2.6-vmi"
+	@echo "    build-linux-2.6-vmi-i30pc30"
+	@echo "    build-linux-2.6-vmi-i30pc30-native"
 
-modules_linux-2.6-i30pc48-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc48-native/extra/uka_perfmon.ko
-modules_linux-2.6-i30pc30-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30-native/extra/uka_perfmon.ko
-modules_linux-2.6-i30pc62-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc62-native/extra/uka_perfmon.ko
+build-modules-2.6-i30pc48-native: $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc48-native/extra/uka_perfmon.ko
+build-modules-2.6-i30pc30-native: $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30-native/extra/uka_perfmon.ko
+build-modules-2.6-i30pc62-native: = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc62-native/extra/uka_perfmon.ko
 
-modules_linux-2.6-i30pc30 = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30/extra/uka_perfmon.ko
-modules_linux-2.6-i30pc30-large = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30-large/extra/uka_perfmon.ko
+build-modules-2.6-i30pc30: $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30/extra/uka_perfmon.ko
+build-modules-2.6-i30pc30-large: $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-afterburn-i30pc30-large/extra/uka_perfmon.ko
 
-modules_linux-2.6-vmi-i30pc30 = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-i30pc30/extra/uka_perfmon.ko
-modules_linux-2.6-vmi-i30pc30-native = $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-i30pc30-native/extra/uka_perfmon.ko
+build-modules-2.6-vmi-i30pc30: $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-i30pc30/extra/uka_perfmon.ko
+build-modules-2.6-vmi-i30pc30-native: $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6-vmi)-vmi-i30pc30-native/extra/uka_perfmon.ko
 
 ######################################################################
 #
@@ -213,9 +221,6 @@ reconfig-l4ka-linux-%: $(BUILD_DIR)/l4ka-linux-%/.config
 #  Wedge
 ######################################################################
 
-build-wedge-l4ka-ddos: type=l4ka-ddos
-build-wedge-l4ka-ddos: build-wedge-l4ka-prereqs \
-  $(BOOT_DIR)/afterburn-wedge-l4ka-ddos
 OPTS_wedge-l4ka-ddos = WEDGE_L4KA SMP=n DEVICE_PASSTHRU=n DEVICE_DP83820=y \
   GUEST_PTE_HOOK=n L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces \
   L4KA_PISTACHIO_USER=$(INSTALL_ROOT)

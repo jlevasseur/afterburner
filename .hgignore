@@ -1,0 +1,16 @@
+.*/CVS/.*
+CVS/.*
+.*.o$
+.*Lexer.cpp$
+.*Lexer.hpp$
+.*Parser.cpp$
+.*Parser.hpp$
+.*TokenTypes.txt$
+.*TokenTypes.hpp$
+\.#.*
+^extern$
+^build$
+^usr$
+^patches/work/.*
+^patches/receipts/.*
+^patches/archives/.*

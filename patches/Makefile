@@ -27,8 +27,6 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #                
-# $Id: Makefile,v 1.63 2005/12/16 09:18:32 joshua Exp $
-#                
 ######################################################################
 
 PARENT_DIR = $(dir $(CURDIR))
@@ -125,7 +123,8 @@ VERSION_module-init-tools = 3.2-pre7
 VERSION_genromfs = 0.5.1
 #VERSION_python = 2.4.2
 VERSION_python = 2.3.5
-VERSION_hg = 0.7
+VERSION_hg = 0.8
+VERSION_antlr = 2.7.6
 
 VERSION_i386_gcc = 3.4.4
 VERSION_powerpc_gcc = 3.3.6
@@ -226,6 +225,11 @@ TARBALL_hg = mercurial-$(VERSION_hg).tar.gz
 UNPACK_hg = mercurial-$(VERSION_hg)
 URL_hg = http://www.selenic.com/mercurial/release/$(TARBALL_hg)
 URL_$(TARBALL_hg) = $(URL_hg)
+
+TARBALL_antlr = antlr-$(VERSION_antlr).tar.gz
+UNPACK_antlr = antlr-$(VERSION_antlr)
+URL_antlr = http://www.antlr.org/download/$(TARBALL_antlr)
+URL_$(TARBALL_antlr) = $(URL_antlr)
 
 ######################################################################
 #
@@ -340,27 +344,32 @@ retrieve-all: \
 ######################################################################
 
 help-patch::
-	@echo "  patch-binutils"
 	@echo "  patch-linux-2.6"
-	@echo "  patch-xen-2.0"
+	@echo "  patch-xen-2"
 	@echo "  patch-qemu"
 	@echo "  patch-idl4"
 	@echo "  patch-pistachio"
 
 PATCH = patch -Np1
 
-.PHONY: patch-binutils patch-linux-2.6 patch-xen-2.0 patch-qemu patch-idl4 patch-pistachio patch-linux-2.4
-patch-binutils: receipts/patch-binutils-$(VERSION_binutils)
+.PHONY: patch-linux-2.6 patch-xen-2 patch-qemu patch-idl4 patch-pistachio patch-linux-2.4
 patch-linux-2.6: receipts/patch-linux-$(VERSION_linux-2.6)
 patch-linux-2.6-vmi: receipts/patch-linux-$(VERSION_linux-2.6-vmi)
 patch-linux-2.4: receipts/patch-linux-$(VERSION_linux-2.4)
-patch-xen-2.0: receipts/patch-xen-$(VERSION_xen-2)
-patch-xen-3.0: receipts/patch-xen-$(VERSION_xen-3)
+patch-xen-2: receipts/patch-xen-$(VERSION_xen-2)
+patch-xen-3: receipts/patch-xen-$(VERSION_xen-3)
 patch-qemu: receipts/patch-qemu-$(VERSION_qemu)
 patch-idl4: receipts/patch-idl4-$(VERSION_idl4)
 patch-pistachio: receipts/patch-pistachio
 
-PATCH_FILE-binutils = $(CURDIR)/binutils/binutils-$(VERSION_binutils)-afterburn.patch
+receipts/patch-linux-$(VERSION_linux-2.6): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
+receipts/patch-linux-$(VERSION_linux-2.6-vmi): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi)
+receipts/patch-linux-$(VERSION_linux-2.4): $(ARCHIVE_DIR)/$(TARBALL_linux-2.4)
+receipts/patch-xen-$(VERSION_xen-2): $(ARCHIVE_DIR)/$(TARBALL_xen-2)
+receipts/patch-xen-$(VERSION_xen-3): $(ARCHIVE_DIR)/$(TARBALL_xen-3)
+receipts/patch-qemu-$(VERSION_qemu): $(ARCHIVE_DIR)/$(TARBALL_qemu)
+receipts/patch-idl4-$(VERSION_idl4): $(ARCHIVE_DIR)/$(TARBALL_idl4)
+
 PATCH_FILE-linux-2.6 = $(CURDIR)/linux/linux-$(VERSION_linux-2.6)-big-afterburn.patch
 PATCH_FILE-linux-2.6-vmi = $(CURDIR)/linux/linux-$(VERSION_linux-2.6-vmi)-vmi.patch
 PATCH_FILE-linux-2.4 = $(CURDIR)/linux/linux-$(VERSION_linux-2.4)-big-afterburn.patch
@@ -370,59 +379,33 @@ PATCH_FILE-xen-3 = $(CURDIR)/xen/xen-$(VERSION_xen-3)-afterburn.patch
 PATCH_FILE-idl4 = $(CURDIR)/idl4/idl4-$(VERSION_idl4).patch
 PATCH_FILE-pistachio = $(CURDIR)/pistachio/pistachio-kernel-perfmon.patch
 
-receipts/patch-binutils-$(VERSION_binutils): type=binutils
-receipts/patch-binutils-$(VERSION_binutils): untar=jxf
-receipts/patch-binutils-$(VERSION_binutils): $(ARCHIVE_DIR)/$(TARBALL_binutils) $(PATCH_FILE-binutils)
+untar_.gz  = -zxf
+untar_.tgz = -zxf
+untar_.bz2 = -jxf
+untar_.bgz = -jxf
 
-receipts/patch-linux-$(VERSION_linux-2.6): type=linux-2.6
-receipts/patch-linux-$(VERSION_linux-2.6): untar=jxf
-receipts/patch-linux-$(VERSION_linux-2.6): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6) $(PATCH_FILE-linux-2.6)
-
-receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi: type=linux-2.6-vmi
-receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi: untar=jxf
-receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi: $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi) $(PATCH_FILE-linux-2.6-vmi)
-
-receipts/patch-linux-$(VERSION_linux-2.4): type=linux-2.4
-receipts/patch-linux-$(VERSION_linux-2.4): untar=jxf
-receipts/patch-linux-$(VERSION_linux-2.4): $(ARCHIVE_DIR)/$(TARBALL_linux-2.4) $(PATCH_FILE-linux-2.4)
-
-receipts/patch-qemu-$(VERSION_qemu): type=qemu
-receipts/patch-qemu-$(VERSION_qemu): untar=zxf
-receipts/patch-qemu-$(VERSION_qemu): $(ARCHIVE_DIR)/$(TARBALL_qemu) $(PATCH_FILE-qemu)
-
-receipts/patch-idl4-$(VERSION_idl4): type=idl4
-receipts/patch-idl4-$(VERSION_idl4): untar=zxf
-receipts/patch-idl4-$(VERSION_idl4): $(ARCHIVE_DIR)/$(TARBALL_idl4) $(PATCH_FILE-idl4)
-
-receipts/patch-xen-$(VERSION_xen-2): type=xen-2
-receipts/patch-xen-$(VERSION_xen-2): untar=zxf
-receipts/patch-xen-$(VERSION_xen-2): $(ARCHIVE_DIR)/$(TARBALL_xen-2) $(PATCH_FILE-xen-2)
-
-receipts/patch-xen-$(VERSION_xen-3): type=xen-3
-receipts/patch-xen-$(VERSION_xen-3): untar=zxf
-receipts/patch-xen-$(VERSION_xen-3): $(ARCHIVE_DIR)/$(TARBALL_xen-3) $(PATCH_FILE-xen-3)
-
-
-receipts/patch-%:
-	@echo Extracting the archive $(TARBALL_$(type)) to apply a new patch.
-	@if [ -d $(SRCDIR)/$(UNPACK_$(type)) ] ; then \
-	  echo $(SRCDIR)/$(UNPACK_$(type)) already exists. ; \
-	  echo Please remove it first. ; \
-	  exit 1 ; \
-	fi
-	$(Q) mkdir -p $(SRCDIR) receipts
-	$(Q) (cd $(SRCDIR) && tar $(untar) $(ARCHIVE_DIR)/$(TARBALL_$(type)))
-	$(Q) if [ -n "$(PREUNPACK_$(type))" ] ; then cd $(SRCDIR) && mv $(PREUNPACK_$(type)) $(UNPACK_$(type)) ; fi
-	@echo Applying the patch.
-	$(Q) (cd $(SRCDIR)/$(UNPACK_$(type)) && $(PATCH) < $(PATCH_FILE-$(type)))
-	$(Q) touch $@
-	@echo The newly patched project: $(SRCDIR)/$(UNPACK_$(type))
+untar_opts = $(untar_$(suffix $(1)))
 
 receipts/patch-pistachio: receipts/cvs-pistachio $(PATCH_FILE-pistachio)
 	@echo Applying the patch.
 	$(Q) (cd $(SRCDIR)/pistachio && $(PATCH) < $(PATCH_FILE-pistachio))
 	$(Q) touch $@
 	@echo The newly patched project: $(SRCDIR)/pistachio
+
+
+receipts/patch-%:
+	@echo Extracting the archive $(TARBALL_$*) to apply a new patch.
+	@if [ -d $(SRCDIR)/$(UNPACK_$*) ] ; then \
+	  echo $(SRCDIR)/$(UNPACK_$*) already exists. ; \
+	  echo Please remove it first. ; \
+	  exit 1 ; \
+	fi
+	$(Q) mkdir -p $(SRCDIR)/$(UNPACK_$*) receipts
+	$(Q) (cd $(SRCDIR)/$(UNPACK_$*) && tar --strip-components=1 $(call untar_opts,$(TARBALL_$*)) $(ARCHIVE_DIR)/$(TARBALL_$*))
+	@echo Applying the patch.
+	$(Q) (cd $(SRCDIR)/$(UNPACK_$*) && $(PATCH) < $(PATCH_FILE-$*))
+	$(Q) touch $@
+	@echo The newly patched project: $(SRCDIR)/$(UNPACK_$*)
 
 ######################################################################
 # Build binutils
@@ -432,8 +415,8 @@ help-build::
 	@echo "  build-binutils"
 help-clean::
 	@echo "  clean-binutils"
-build-utils:: build-binutils
-clean-utils:: clean-binutils
+build-utils-powerpc:: build-binutils
+clean-utils-powerpc:: clean-binutils
 
 build-binutils: receipts/install-binutils-$(VERSION_binutils)
 
@@ -444,7 +427,7 @@ ifeq ($(HOST_PLATFORM),Darwin)
 ENV_binutils = env CC="cc -no-cpp-precomp"
 endif
 
-receipts/install-binutils-$(VERSION_binutils): receipts/patch-binutils-$(VERSION_binutils)
+receipts/install-binutils-$(VERSION_binutils):
 	@echo Building binutils in $(BUILD_DIR)/$(UNPACK_binutils)
 	$(Q) mkdir -p $(BUILD_DIR)/$(UNPACK_binutils) receipts $(INSTALL_ROOT)
 	$(Q) (cd $(BUILD_DIR)/$(UNPACK_binutils) && $(ENV_binutils) $(SRCDIR)/$(UNPACK_binutils)/configure --prefix=$(INSTALL_ROOT) --disable-nls $(OPTS_binutils))
@@ -464,8 +447,8 @@ help-build::
 	@echo "  build-gcc"
 help-clean::
 	@echo "  clean-gcc"
-build-utils-$(TOOLPREFIX):: build-gcc
-clean-utils-$(TOOLPREFIX):: clean-gcc
+build-utils-powerpc:: build-gcc
+clean-utils-powerpc:: clean-gcc
 
 build-gcc: receipts/install-gcc-$(VERSION_gcc)
 
@@ -662,12 +645,18 @@ help-build::
 	@echo "  build-pistachio-kernel"
 	@echo "    build-pistachio-kernel-p3"
 	@echo "    build-pistachio-kernel-p4"
+	@echo "    build-pistachio-kernel-p4perf"
+	@echo "    build-pistachio-kernel-amdk8"
 	@echo "    build-pistachio-kernel-qemu"
+	@echo "    build-pistachio-powerpc-qemu"
 help-clean::
 	@echo "  clean-pistachio-kernel"
 	@echo "    clean-pistachio-kernel-p3"
 	@echo "    clean-pistachio-kernel-p4"
+	@echo "    clean-pistachio-kernel-p4perf"
+	@echo "    clean-pistachio-kernel-amdk8"
 	@echo "    clean-pistachio-kernel-qemu"
+	@echo "    clean-pistachio-powerpc-qemu"
 build-runtime:: build-pistachio-kernel
 build-console:: build-pistachio-kernel
 clean-runtime:: clean-pistachio-kernel
@@ -681,38 +670,16 @@ build-pistachio-kernel-i386: \
 build-pistachio-kernel-powerpc: \
   build-pistachio-kernel-powerpc-qemu
 
-# Give enough declarations to Make to figure out that 
-# pattern-matching rules are unsatisfied.
-build-pistachio-kernel-p3: type=p3
-build-pistachio-kernel-p3: \
-  $(BUILD_DIR)/pistachio-kernel-p3/ia32-kernel $(BOOT_DIR)/pistachio-p3
+build-pistachio-kernel-%: $(BUILD_DIR)/pistachio-kernel-%/ia32-kernel $(BOOT_DIR)/pistachio-%
+	@echo "Finished $@"
 
-build-pistachio-kernel-p4: type=p4
-build-pistachio-kernel-p4: \
-  $(BUILD_DIR)/pistachio-kernel-p4/ia32-kernel $(BOOT_DIR)/pistachio-p4
-
-build-pistachio-kernel-p4perf: type=p4perf
-build-pistachio-kernel-p4perf: \
-  $(BUILD_DIR)/pistachio-kernel-p4perf/ia32-kernel $(BOOT_DIR)/pistachio-p4perf
-
-build-pistachio-kernel-qemu: type=qemu
-build-pistachio-kernel-qemu: \
-  $(BUILD_DIR)/pistachio-kernel-qemu/ia32-kernel $(BOOT_DIR)/pistachio-qemu
-
-build-pistachio-kernel-amdk8: type=amdk8
-build-pistachio-kernel-amdk8: \
-  $(BUILD_DIR)/pistachio-kernel-amdk8/ia32-kernel $(BOOT_DIR)/pistachio-amdk8
-
-build-pistachio-kernel-powerpc-qemu: type=powerpc-qemu
-build-pistachio-kernel-powerpc-qemu: \
-  $(BUILD_DIR)/pistachio-kernel-powerpc-qemu/powerpc-kernel \
-  $(BOOT_DIR)/pistachio-powerpc-qemu
-
+.PRECIOUS: $(BOOT_DIR)/pistachio-%
 $(BOOT_DIR)/pistachio-%: $(BUILD_DIR)/pistachio-kernel-%/ia32-kernel
 	$(Q) mkdir -p $(BOOT_DIR)
 	$(Q) cp $< $@
 	$(Q) $(BOOT_INSTALL_CMD)
 
+.PRECIOUS: $(BOOT_DIR)/pistachio-%
 $(BOOT_DIR)/pistachio-%: $(BUILD_DIR)/pistachio-kernel-%/powerpc-kernel
 	$(Q) mkdir -p $(BOOT_DIR)
 	$(Q) cp $< $@
@@ -784,29 +751,31 @@ endif
 .PRECIOUS: $(BUILD_DIR)/pistachio-kernel-%/config/config.h
 $(BUILD_DIR)/pistachio-kernel-%/config/config.h: receipts/patch-pistachio
 	$(Q) mkdir -p $(BUILD_DIR)
-	$(Q) (cd $(SRCDIR)/pistachio/kernel && make BUILDDIR=$(BUILD_DIR)/pistachio-kernel-$(type))
-	$(Q) (cd $(BUILD_DIR)/pistachio-kernel-$(type) && make batchconfig CMLBATCH_PARAMS='$(OPTS_pistachio-kernel-$(type))')
-	$(Q) (cd $(BUILD_DIR)/pistachio-kernel-$(type) && make batchconfig CMLBATCH_PARAMS='$(OPTS2_pistachio-kernel-$(type))')
+	$(Q) (cd $(SRCDIR)/pistachio/kernel && make BUILDDIR=$(BUILD_DIR)/pistachio-kernel-$*)
+	$(Q) (cd $(BUILD_DIR)/pistachio-kernel-$* && make batchconfig CMLBATCH_PARAMS='$(OPTS_pistachio-kernel-$*)')
+	$(Q) (cd $(BUILD_DIR)/pistachio-kernel-$* && make batchconfig CMLBATCH_PARAMS='$(OPTS2_pistachio-kernel-$*)')
 
+.PRECIOUS: $(BUILD_DIR)/pistachio-kernel-%/ia32-kernel
 $(BUILD_DIR)/pistachio-kernel-%/ia32-kernel: $(BUILD_DIR)/pistachio-kernel-%/config/config.h
 	@echo Building Pistachio microkernel in $(@D)
 	$(Q) (cd $(@D) && make -s NO_CCACHE=1 TOOLPREFIX=$(TOOLPREFIX))
 
+.PRECIOUS: $(BUILD_DIR)/pistachio-kernel-%/powerpc-kernel
 $(BUILD_DIR)/pistachio-kernel-%/powerpc-kernel: $(BUILD_DIR)/pistachio-kernel-%/config/config.h
 	@echo Building Pistachio microkernel in $(@D)
 	$(Q) (cd $(@D) && make -s NO_CCACHE=1 TOOLPREFIX=$(TOOLPREFIX))
 
-reconfig-pistachio-kernel-%:
-	$(Q) (cd $(BUILD_DIR)/$(subst reconfig-,,$@) && make menuconfig)
-
-clean-pistachio-kernel: \
-  clean-pistachio-kernel-p4 clean-pistachio-kernel-p3 \
-  clean-pistachio-kernel-qemu clean-pistachio-kernel-amdk8 \
-  clean-pistachio-kernel-powerpc-qemu
+reconfig-pistachio-kernel-%: $(BUILD_DIR)/pistachio-kernel-%/config/config.h
+	$(Q) (cd $(BUILD_DIR)/pistachio-kernel-$* && make menuconfig)
 
 clean-pistachio-kernel-%:
-	-$(Q) (cd $(BUILD_DIR) && rm -rf $(subst clean-,,$@))
+	-$(Q) (cd $(BUILD_DIR)/pistachio-kernel-$* && make clean)
 
+uninstall-pistachio-kernel-%:
+	-$(Q) rm -f $(BOOT_DIR)/pistachio-$*
+
+rebuild-pistachio-kernel-%: clean-pistachio-kernel-% uninstall-pistachio-kernel-%
+	$(MAKE) build-pistachio-kernel-$*
 
 ######################################################################
 # Build Pistachio user
@@ -940,6 +909,56 @@ clean-marzipan:
 	-$(Q) rm -f receipts/config-marzipan
 
 ######################################################################
+# Build Antlr
+######################################################################
+
+help-build::
+	@echo "  build-antlr"
+help-clean::
+	@echo "  clean-antlr"
+
+.PHONY: build-antlr
+build-antlr: receipts/install-antlr-$(VERSION_antlr)
+
+receipts/install-antlr-$(VERSION_antlr): receipts/unpack-antlr-$(VERSION_antlr)
+	@echo "Building Antlr."
+	$(Q) mkdir -p $(BUILD_DIR)/$(UNPACK_antlr)
+	$(Q) (cd $(BUILD_DIR)/$(UNPACK_antlr) && $(SRCDIR)/$(UNPACK_antlr)/configure --prefix=$(INSTALL_ROOT) --disable-csharp)
+	$(Q) (cd $(BUILD_DIR)/$(UNPACK_antlr) && make -s all install)
+	$(Q) touch $@
+
+$(BUILD_DIR)/$(UNPACK_antlr):
+	$(Q) mkdir -p $@
+
+receipts/unpack-antlr-$(VERSION_antlr): $(ARCHIVE_DIR)/$(TARBALL_antlr)
+	@echo "Unpacking Antlr in $(SRCDIR)/$(UNPACK_antlr)."
+	$(Q) mkdir -p $(SRCDIR)
+	$(Q) (cd $(SRCDIR) && tar $(call untar_opts,$(TARBALL_antlr)) $(ARCHIVE_DIR)/$(TARBALL_antlr))
+	$(Q) touch $@
+
+######################################################################
+# Build Antlr's C++ runtime.
+######################################################################
+
+help-build::
+	@echo "  build-antlr-cxx"
+help-clean::
+	@echo "  clean-antlr-cxx"
+build-utils:: build-antlr-cxx
+clean-utils:: clean-antlr-cxx
+
+.PHONY: build-antlr-cxx
+build-antlr-cxx: receipts/install-antlr-cxx-$(VERSION_antlr)
+
+receipts/install-antlr-cxx-$(VERSION_antlr): receipts/unpack-antlr-$(VERSION_antlr)
+	@echo "Building Antlr's C++ runtime."
+	$(Q) mkdir -p $(BUILD_DIR)/$(UNPACK_antlr)-cxx
+	$(Q) (cd $(BUILD_DIR)/$(UNPACK_antlr)-cxx && $(SRCDIR)/$(UNPACK_antlr)/configure --prefix=$(INSTALL_ROOT) --disable-csharp --disable-java --disable-python --disable-examples --enable-cxx)
+	$(Q) (cd $(BUILD_DIR)/$(UNPACK_antlr)-cxx && make -s all install)
+	$(Q) touch $@
+
+
+######################################################################
 # Build the assembler Afterburner
 ######################################################################
 
@@ -953,18 +972,14 @@ clean-utils:: clean-afterburner
 .PHONY: build-afterburner
 build-afterburner: $(INSTALL_ROOT)/bin/afterburner 
 
-$(INSTALL_ROOT)/bin:
-	mkdir -p $@
-
-$(INSTALL_ROOT)/bin/afterburner: $(BUILD_DIR)/asm-parser/afterburner | $(INSTALL_ROOT)/bin
+$(INSTALL_ROOT)/bin/afterburner: $(BUILD_DIR)/asm-parser/afterburner
+	$(Q) mkdir -p $(INSTALL_ROOT)/bin
 	$(Q) cp $< $@
 
-$(BUILD_DIR)/asm-parser:
-	mkdir -p $@
-
-$(BUILD_DIR)/asm-parser/afterburner: | $(BUILD_DIR)/asm-parser
+$(BUILD_DIR)/asm-parser/afterburner: receipts/install-antlr-cxx-$(VERSION_antlr)
 	@echo Building the Afterburner assembler parser.
-	$(Q) (cd ../asm-parser && make O=$(BUILD_DIR)/asm-parser test)
+	$(Q) mkdir -p $(BUILD_DIR)/asm-parser
+	$(Q) (cd ../asm-parser && make -s O=$(BUILD_DIR)/asm-parser all)
 
 .PHONY: clean-afterburner uninstall-afterburner rebuild-afterburner
 clean-afterburner:
@@ -997,84 +1012,68 @@ build-runtime-i386:: build-wedge
 clean-runtime-i386:: clean-wedge
 build-vmi:: build-wedge-kaxen-vmi-passthru build-wedge-kaxen-vmi
 
-build-wedge: build-wedge-l4ka-passthru build-wedge-kaxen-passthru build-wedge-kaxen
-
-build-wedge-l4ka-prereqs: receipts/install-pistachio-user \
+build-wedge-prereqs-l4ka: receipts/install-pistachio-user \
   receipts/install-idl4-$(VERSION_idl4) receipts/cvs-marzipan
-build-wedge-kaxen-prereqs: receipts/patch-xen-$(VERSION_xen-2)
-build-wedge-kaxen-3-prereqs:
+build-wedge-prereqs-kaxen: receipts/patch-xen-$(VERSION_xen-2)
 
 ifdef TOOLPREFIX
   OPTS_wedge = TOOLPREFIX=$(TOOLPREFIX)
 endif
 
-build-wedge-l4ka-passthru: type=l4ka-passthru
-build-wedge-l4ka-passthru: build-wedge-l4ka-prereqs $(BOOT_DIR)/afterburn-wedge-l4ka-passthru
+build-wedge-l4ka-%: build-wedge-prereqs-l4ka $(BOOT_DIR)/afterburn-wedge-l4ka-%
+	@echo "Finished $@"
+
+build-wedge-kaxen-%: build-wedge-prereqs-kaxen $(BOOT_DIR)/afterburn-wedge-kaxen-%
+	@echo "Finished $@"
+
 OPTS_wedge-l4ka-passthru = WEDGE_L4KA SMP=n DEVICE_PASSTHRU \
   L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces \
   L4KA_PISTACHIO_USER=$(INSTALL_ROOT)
 
-build-wedge-l4ka-passthru-perf: type=l4ka-passthru-perf
-build-wedge-l4ka-passthru-perf: build-wedge-l4ka-prereqs $(BOOT_DIR)/afterburn-wedge-l4ka-passthru-perf
 OPTS_wedge-l4ka-passthru-perf = WEDGE_L4KA SMP=n DEVICE_PASSTHRU \
   L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces \
   L4KA_PISTACHIO_USER=$(INSTALL_ROOT) OPTIMIZE=y
 
 
-build-wedge-kaxen-passthru: type=kaxen-passthru
-build-wedge-kaxen-passthru: build-wedge-kaxen-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen-passthru
 OPTS_wedge-kaxen-passthru = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public KAXEN_INT_FP \
   XEN_2_0
 
-build-wedge-kaxen-vmi-passthru: type=kaxen-vmi-passthru
-build-wedge-kaxen-vmi-passthru: build-wedge-kaxen-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen-vmi-passthru
 OPTS_wedge-kaxen-vmi-passthru = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public KAXEN_INT_FP \
   XEN_2_0 VMI_SUPPORT=y WEDGE_VIRT=0xe0000000 WEDGE_VIRT_END=0xf0000000
 
-build-wedge-kaxen-vmi-passthru-perf: type=kaxen-vmi-passthru-perf
-build-wedge-kaxen-vmi-passthru-perf: build-wedge-kaxen-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen-vmi-passthru-perf
 OPTS_wedge-kaxen-vmi-passthru-perf = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   OPTIMIZE=y KAXEN_INT_FP=y \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public \
   XEN_2_0 VMI_SUPPORT=y WEDGE_VIRT=0xe0000000 WEDGE_VIRT_END=0xf0000000
 
-build-wedge-kaxen-3-passthru: type=kaxen-3-passthru
-build-wedge-kaxen-3-passthru: build-wedge-kaxen-3-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen-3-passthru
 OPTS_wedge-kaxen-3-passthru = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-3)/xen/include/public KAXEN_INT_FP \
   XEN_3_0
 
 
-build-wedge-kaxen-passthru-perf: type=kaxen-passthru-perf
-build-wedge-kaxen-passthru-perf: build-wedge-kaxen-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen-passthru-perf
 OPTS_wedge-kaxen-passthru-perf = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   OPTIMIZE=y KAXEN_INT_FP=y \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public \
   XEN_2_0
 
 
-build-wedge-l4ka: type=l4ka
-build-wedge-l4ka: build-wedge-l4ka-prereqs $(BOOT_DIR)/afterburn-wedge-l4ka
-OPTS_wedge-l4ka = WEDGE_L4KA SMP=n DEVICE_PASSTHRU=n DEVICE_DP83820=y \
+OPTS_wedge-l4ka-guest = WEDGE_L4KA SMP=n DEVICE_PASSTHRU=n DEVICE_DP83820=y \
   L4KA_INTERFACE_DIR=$(SRCDIR)/$(MARZIPAN_CVS)/interfaces \
   L4KA_PISTACHIO_USER=$(INSTALL_ROOT)
 
-build-wedge-kaxen: type=kaxen
-build-wedge-kaxen: build-wedge-kaxen-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen
-OPTS_wedge-kaxen = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU=n \
+OPTS_wedge-kaxen-guest = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU=n \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public KAXEN_INT_FP \
   XEN_2_0
 
-build-wedge-kaxen-vmi: type=kaxen-vmi
-build-wedge-kaxen-vmi: build-wedge-kaxen-prereqs $(BOOT_DIR)/afterburn-wedge-kaxen-vmi
-OPTS_wedge-kaxen-vmi = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU=n \
+OPTS_wedge-kaxen-vmi-guest = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU=n \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public KAXEN_INT_FP \
   XEN_2_0 VMI_SUPPORT=y WEDGE_VIRT=0xe0000000 WEDGE_VIRT_END=0xf0000000
 
 
 
+.PRECIOUS: $(BOOT_DIR)/afterburn-wedge-%
 $(BOOT_DIR)/afterburn-wedge-%: $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge
 	$(Q) mkdir -p $(BOOT_DIR)
 	$(Q) cp $< $@
@@ -1083,53 +1082,23 @@ $(BOOT_DIR)/afterburn-wedge-%: $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge
 .PRECIOUS: $(BUILD_DIR)/afterburn-wedge-%/config/config.h
 $(BUILD_DIR)/afterburn-wedge-%/config/config.h:
 	$(Q) mkdir -p $(BUILD_DIR)
-	$(Q) (cd ../afterburn-wedge && make BUILDDIR=$(BUILD_DIR)/afterburn-wedge-$(type))
-	$(Q) (cd $(BUILD_DIR)/afterburn-wedge-$(type) && make CMLBATCH_PARAMS='$(OPTS_wedge-$(type))' batchconfig)
+	$(Q) (cd ../afterburn-wedge && make BUILDDIR=$(BUILD_DIR)/afterburn-wedge-$*)
+	$(Q) (cd $(BUILD_DIR)/afterburn-wedge-$* && make CMLBATCH_PARAMS='$(OPTS_wedge-$*)' batchconfig)
 
 .PRECIOUS: $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge
 $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge: $(BUILD_DIR)/afterburn-wedge-%/config/config.h
-	@echo Building the $(type) Afterburn Wedge in $(@D)
+	@echo Building the $* Afterburn Wedge in $(@D)
 	$(Q) (cd $(@D) && make -s $(OPTS_wedge))
 
 reconfig-wedge-%:
-	$(Q) (cd $(BUILD_DIR)/$(subst reconfig,afterburn,$@) && make menuconfig)
-rebuild-wedge-%:
-	-$(Q) rm -f $(BOOT_DIR)/$(subst rebuild,afterburn,$@)
-	-$(Q) rm -f $(BUILD_DIR)/$(subst rebuild,afterburn,$@)/afterburn-wedge
-	make $(subst rebuild,build,$@)
-
-clean-wedge: clean-wedge-l4ka-passthru clean-wedge-kaxen-passthru \
-  clean-wedge-l4ka clean-wedge-xen
+	$(Q) (cd $(BUILD_DIR)/afterburn-wedge-$* && make menuconfig)
+uninstall-wedge-%:
+	-$(Q) rm -f $(BOOT_DIR)/afterburn-wedge-$*
 clean-wedge-%:
-	-$(Q) (cd $(BUILD_DIR) && rm -rf $(subst clean,afterburn,$@))
+	-$(Q) (cd $(BUILD_DIR)/afterburn-wedge-$* && make clean)
+rebuild-wedge-%: clean-wedge-% uninstall-wedge-%
+	$(MAKE) build-wedge-$*
 
-######################################################################
-# Build empty wedge
-######################################################################
-help-build::
-	@echo "  build-wedge-empty"
-help-clean::
-	@echo "  clean-wedge-empty"
-build-runtime-i386:: build-wedge-empty
-clean-runtime-i386:: clean-wedge-empty
-
-build-wedge-empty: receipts/build-afterburn-wedge-empty
-
-receipts/config-afterburn-wedge-empty: ../afterburn-wedge/Makefile
-	$(Q) mkdir -p $(BUILD_DIR) receipts
-	$(Q) (cd ../afterburn-wedge && make BUILDDIR=$(BUILD_DIR)/afterburn-wedge-empty)
-	$(Q) (cd $(BUILD_DIR)/afterburn-wedge-empty && make CMLBATCH_PARAMS='WEDGE_WINNT' batchconfig)
-	$(Q) touch $@
-
-receipts/build-afterburn-wedge-empty: receipts/config-afterburn-wedge-empty
-	@echo Building the empty Afterburn Wedge in $(BUILD_DIR)/afterburn-wedge-empty
-	$(Q) (cd $(BUILD_DIR)/afterburn-wedge-empty && make -s macros)
-	$(Q) touch $@
-
-clean-wedge-empty:
-	-$(Q) (cd $(BUILD_DIR) && rm -rf afterburn-wedge-empty)
-	-$(Q) rm -f receipts/config-afterburn-wedge-empty
-	-$(Q) rm -f receipts/build-afterburn-wedge-empty
 
 ######################################################################
 # Build Xen 3
@@ -1276,13 +1245,12 @@ $(BOOT_DIR)/bzImage-$(VERSION_linux-2.4): $(SRCDIR)/$(UNPACK_linux-2.4)/arch/i38
 .PRECIOUS: $(SRCDIR)/$(UNPACK_linux-2.4)/.config
 $(SRCDIR)/$(UNPACK_linux-2.4)/.config: ../afterburn-wedge/doc/linux-2.4/dot-config
 	$(Q) mkdir -p $(@D)
-	$(Q) cat $< | sed -e '{ s/CONFIG_AFTERBURN_DIR=.*/CONFIG_AFTERBURN_DIR="$(subst /,\/,$(BUILD_DIR)/afterburn-wedge-empty)"/g ; }' > $@
+	$(Q) cp $< $@
 	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.4) && make -s oldconfig && make -s dep)
 
 .PRECIOUS: $(SRCDIR)/$(UNPACK_linux-2.4)/vmlinux $(SRCDIR)/$(UNPACK_linux-2.4)/arch/i386/boot/bzImage
 $(SRCDIR)/$(UNPACK_linux-2.4)/vmlinux \
 $(SRCDIR)/$(UNPACK_linux-2.4)/arch/i386/boot/bzImage: \
-		receipts/build-afterburn-wedge-empty \
 		receipts/patch-linux-$(VERSION_linux-2.4) \
 		$(SRCDIR)/$(UNPACK_linux-2.4)/.config
 	@echo Building Linux in $(SRCDIR)/$(UNPACK_linux-2.4)
@@ -1302,17 +1270,25 @@ rebuild-linux-2.4:
 # Build Linux 2.6 with VMI
 ######################################################################
 help-build::
-	@echo "  build-linux-2.6-vmi type=<driver|guest>"
+	@echo "  build-linux-2.6-vmi"
+	@echo "    build-linux-2.6-vmi-driver"
+	@echo "    build-linux-2.6-vmi-guest"
 help-clean::
 	@echo "  clean-linux-2.6-vmi"
-build-vmi:: build-linux-2.6-vmi
+	@echo "    clean-linux-2.6-vmi-driver"
+	@echo "    clean-linux-2.6-vmi-guest"
+build-vmi:: build-linux-2.6-vmi-driver
 
-ifneq ($(type),)
-build-linux-2.6-vmi: \
-  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6-vmi)-vmi-$(type) \
-  $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-$(type) \
-  $(modules_linux-2.6-vmi-$(type))
-endif
+.PHONY: build-linux-2.6-vmi-%
+build-linux-2.6-vmi-%: \
+  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6-vmi)-vmi-% \
+  $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-% \
+  build-modules-2.6-vmi-%
+	@echo "Finished $@"
+
+.PHONY: build-modules-2.6-vmi-%
+build-modules-2.6-vmi-%:
+	@echo "Finished $@"
 
 
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinuz
@@ -1333,54 +1309,61 @@ $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-%: $(BUILD_DIR)/$(UNPACK_linux-
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6-vmi)-vmi-%
 	$(Q) mkdir -p $(@D)
-	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-vmi-$(type)"/g ; }' > $@
+	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-vmi-$*"/g ; }' > $@
 
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/arch/i386/boot/bzImage
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux \
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/arch/i386/boot/bzImage: \
 		patch-linux-2.6-vmi \
 		$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config
-	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type)
+	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$*
 	$(Q) mkdir -p $(INSTALL_ROOT)
-	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type) $(OPTS_linux-2.6))
-	$(Q) if grep CONFIG_MODULES=y $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type)/.config ; then cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type) $(OPTS_linux-2.6) modules_install ; fi
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$* $(OPTS_linux-2.6))
+	$(Q) if grep CONFIG_MODULES=y $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$*/.config ; then cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$* $(OPTS_linux-2.6) modules_install ; fi
 
-ifneq ($(type),)
-.PHONY: reconfig-linux-2.6-vmi uninstall-linux-2.6-vmi clean-linux-2.6-vmi rebuild-linux-2.6-vmi
+.PHONY: reconfig-linux-2.6-vmi-% uninstall-linux-2.6-vmi-% clean-linux-2.6-vmi-% rebuild-linux-2.6-vmi-%
 
-reconfig-linux-2.6-vmi:
-	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type) $(OPTS_linux-2.6) menuconfig)
+reconfig-linux-2.6-vmi-%:
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$* $(OPTS_linux-2.6) menuconfig)
 
-uninstall-linux-2.6-vmi:
-	-$(Q) rm -f $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-$(type)
-	-$(Q) rm -f $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6-vmi)-vmi-$(type)
-ifneq ($(modules_linux-2.6-vmi-$(type)),)
-	-$(Q) rm -f $(modules_linux-2.6-vmi-$(type))
-endif
+uninstall-linux-2.6-vmi-%:
+	-$(Q) rm -f $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-$*
+	-$(Q) rm -f $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6-vmi)-vmi-$*
+	-$(Q) (cd $(INSTALL_ROOT)/lib/modules && rm -rf $(VERSION_linux-2.6-vmi)-vmi-$*)
 
-clean-linux-2.6-vmi:
-	-$(Q) rm -f $(addprefix $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type)/,vmlinux vmlinux.stripped vmlinuz arch/i386/boot/bzImage)
-	-$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make clean O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$(type) $(OPTS_linux-2.6))
+clean-linux-2.6-vmi-%:
+	-$(Q) rm -f $(addprefix $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$*/,vmlinux vmlinux.stripped vmlinuz arch/i386/boot/bzImage)
+	-$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6-vmi) && make clean O=$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$* $(OPTS_linux-2.6))
 
-rebuild-linux-2.6-vmi: uninstall-linux-2.6-vmi clean-linux-2.6-vmi build-linux-2.6-vmi
-endif
+rebuild-linux-2.6-vmi-%: uninstall-linux-2.6-vmi-% clean-linux-2.6-vmi-%
+	$(MAKE) build-linux-2.6-vmi-$*
 
 ######################################################################
 # Build Linux 2.6
 ######################################################################
 help-build::
-	@echo "  build-linux-2.6 type=<driver|qemu|guest>"
+	@echo "  build-linux-2.6"
+	@echo "    build-linux-2.6-driver"
+	@echo "    build-linux-2.6-qemu"
+	@echo "    build-linux-2.6-guest"
 help-clean::
 	@echo "  clean-linux-2.6"
-build-runtime-i386:: build-linux-2.6
+	@echo "    clean-linux-2.6-driver"
+	@echo "    clean-linux-2.6-qemu"
+	@echo "    clean-linux-2.6-guest"
+build-runtime-i386:: build-linux-2.6-driver build-linux-2.6-qemu
 clean-runtime-i386:: clean-linux-2.6
 
-ifneq ($(type),)
-build-linux-2.6: \
-  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-$(type) \
-  $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-$(type) \
-  $(modules_linux-2.6-$(type))
-endif
+.PHONY: build-linux-2.6-%
+build-linux-2.6-%: \
+  $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-% \
+  $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-% \
+  build-modules-2.6-%
+	@echo "Finished $@"
+
+build-modules-2.6-%:
+	@echo "Finished $@"
+
 
 OPTS_linux-2.6 += INSTALL_MOD_PATH=$(INSTALL_ROOT)
 ifdef TOOLPREFIX
@@ -1395,11 +1378,13 @@ $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinuz: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/v
 	$(Q) strip -o $(<D)/vmlinux.stripped $(<D)/vmlinux
 	$(Q) gzip -fc $(<D)/vmlinux.stripped > $(<D)/vmlinuz
 
+.PRECIOUS: $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-%
 $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-%: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinuz
 	$(Q) mkdir -p $(BOOT_DIR)
 	$(Q) cp $< $@
 	$(Q) $(BOOT_INSTALL_CMD)
 
+.PRECIOUS: $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-%
 $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-%: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/arch/i386/boot/bzImage
 	$(Q) mkdir -p $(BOOT_DIR)
 	$(Q) cp $< $@
@@ -1408,38 +1393,34 @@ $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-%: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/a
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/.config
 $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6)-%
 	$(Q) mkdir -p $(@D)
-	$(Q) cat $< | sed -e '{ s/CONFIG_AFTERBURN_DIR=.*/CONFIG_AFTERBURN_DIR="$(subst /,\/,$(BUILD_DIR)/afterburn-wedge-empty)"/g ; }' | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-$(type)"/g ; }' > $@
+	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-$*"/g ; }' > $@
 
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinux $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/arch/i386/boot/bzImage
 $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinux \
 $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/arch/i386/boot/bzImage: \
 		patch-linux-2.6 \
-		receipts/build-afterburn-wedge-empty \
 		$(BUILD_DIR)/$(UNPACK_linux-2.6)-%/.config
-	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type)
+	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6)-$*
 	$(Q) mkdir -p $(INSTALL_ROOT)
-	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type) $(OPTS_linux-2.6))
-	$(Q) if grep CONFIG_MODULES=y $(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type)/.config ; then cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type) $(OPTS_linux-2.6) modules_install ; fi
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$* $(OPTS_linux-2.6))
+	$(Q) if grep CONFIG_MODULES=y $(BUILD_DIR)/$(UNPACK_linux-2.6)-$*/.config ; then cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$* $(OPTS_linux-2.6) modules_install ; fi
 
-ifneq ($(type),)
-.PHONY: reconfig-linux-2.6 uninstall-linux-2.6 clean-linux-2.6 rebuild-linux-2.6
+.PHONY: reconfig-linux-2.6-% uninstall-linux-2.6-% clean-linux-2.6-% rebuild-linux-2.6-%
 
-reconfig-linux-2.6:
-	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type) $(OPTS_linux-2.6) menuconfig)
+reconfig-linux-2.6-%:
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$* $(OPTS_linux-2.6) menuconfig)
 
-uninstall-linux-2.6:
-	-$(Q) rm -f $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-$(type)
-	-$(Q) rm -f $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-$(type)
-ifneq ($(modules_linux-2.6-$(type)),)
-	-$(Q) rm -f $(modules_linux-2.6-$(type))
-endif
+uninstall-linux-2.6-%:
+	-$(Q) rm -f $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6)-$*
+	-$(Q) rm -f $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-$* $(modules_linux-2.6-$*)
+	-$(Q) (cd $(INSTALL_ROOT)/lib/modules && rm -rf $(VERSION_linux-2.6)-afterburn-$*)
 
-clean-linux-2.6:
-	-$(Q) rm -f $(addprefix $(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type)/,vmlinux vmlinux.stripped vmlinuz arch/i386/boot/bzImage)
-	-$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make clean O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$(type) $(OPTS_linux-2.6))
+clean-linux-2.6-%:
+	-$(Q) rm -f $(addprefix $(BUILD_DIR)/$(UNPACK_linux-2.6)-$*/,vmlinux vmlinux.stripped vmlinuz arch/i386/boot/bzImage)
+	-$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.6) && make clean O=$(BUILD_DIR)/$(UNPACK_linux-2.6)-$* $(OPTS_linux-2.6))
 
-rebuild-linux-2.6: uninstall-linux-2.6 clean-linux-2.6 build-linux-2.6
-endif
+rebuild-linux-2.6-%: uninstall-linux-2.6-% clean-linux-2.6-%
+	$(MAKE) build-linux-2.6-$*
 
 ######################################################################
 # Darwin's XNU

@@ -50,7 +50,7 @@ asmAnonymousBlock: (asmStatement)+
     { ## = #([ASTBasicBlock, "basic block"], ##); }
     ;
 
-asmBasicBlock: asmLabel (asmStatement)+ 
+asmBasicBlock: (asmLabel)+ (asmStatement)+ 
     { ## = #([ASTBasicBlock, "basic block"], ##); }
     ;
 
@@ -409,7 +409,6 @@ Option options {testLiterals=true;}
 
 class AsmTreeParser extends TreeParser;
 options {
-    k = 2;
 }
 {
 protected:
@@ -487,7 +486,7 @@ asmFile: asmBlocks;
 
 asmBlocks: (asmBlock)* ;
 
-asmBlock: #( ASTBasicBlock (asmLabel)?  (asmStatementLine)* );
+asmBlock: #( ASTBasicBlock (asmLabel)*  (asmStatementLine)* );
 
 asmLabel
     : l:Label 		{ std::cout << l->getText() << std::endl; }

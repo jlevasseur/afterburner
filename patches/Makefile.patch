@@ -2,8 +2,8 @@
 #                
 # Copyright (C) 2005, University of Karlsruhe
 #                
-# File path:     patches/Makefile.diff
-# Description:   Rules to build patches from our internal CVS repository.
+# File path:     patches/Makefile.patch
+# Description:   Rules to build patches of external source projects.
 #                
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -26,136 +26,64 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #                
-# $Id: Makefile.patch,v 1.5 2005/11/17 22:52:50 joshua Exp $
-#                
 ######################################################################
-
 
 ######################################################################
 #
-#  Command line parameters.
+# User parameters
 #
 ######################################################################
 
-#  In normal operation, we want to create a diff against the latest version
-#  of CVS, and thus we first export the latest revision.  To avoid exporting
-#  the latest revision, and to use the last export, specify REUSE=1 on
-#  the command line.
-REUSE ?= 0
-
+patch ?=
 
 ######################################################################
 #
-# Database
-#
-######################################################################
-
-CVS_MOD_binutils  = afterburner/binutils
-CVS_MOD_linux-2.6 = afterburner/linux-2.6
-CVS_MOD_xen-2.0   = afterburner/xen-2.0
-
-UNPACK_DIR_binutils = $(UNPACK_binutils)
-UNPACK_DIR_linux-2.6 = $(UNPACK_linux-2.6)
-UNPACK_DIR_xen-2.0 = $(UNPACK_xen-2)
-
-
-######################################################################
-#
-# Build rules.
+# Patch rules.
 #
 ######################################################################
 
 help::
-	@echo Patch creation targets:
-	@echo "  SOURCES"
-	@echo "  linux-2.6.patch"
-	@echo "  binutils.patch"
-	@echo "  xen-2.0.patch"
+	@echo Patch creation:
+	@echo "  create-patch"
+	@echo "    create-patch-linux-2.6"
+	@echo "    create-patch-linux-2.6-vmi"
+	@echo "    create-patch-linux-2.4"
+	@echo "    create-patch-xen-2"
+	@echo "    create-patch-xen-3"
 	@echo
-	@echo Set REUSE=1 on the command line to skip the CVS export.
-	@echo
 
-work:
-	mkdir work
+untar_.gz  = -zxf
+untar_.tgz = -zxf
+untar_.bz2 = -jxf
+untar_.bgz = -jxf
 
-CVS_DIFF = cvs diff -u -R -kb -N
-CVS_EXPORT = cvs -Q -d i30pc20.ira.uka.de:/home/cvs export -r HEAD -kb
-DIFF = env LC_ALL=C TZ=UTC0 diff -Naur
-PATCH_TEST = patch --dry-run -Np1
+untar_opts = $(untar_$(suffix $(1)))
 
-SOURCES: Makefile.patch Makefile
-	@echo -e "\nLinux 2.6:\n$(URL_linux-2.6)" > $@
-	@echo -e "\nBinutils:\n$(URL_binutils)" >> $@
-	@echo -e "\nXen 2.0:\n$(URL_xen-2)" >> $@
-	@echo -e "\nIDL4:\n$(URL_idl4)" >> $@
-	@echo -e "\nQEMU:\n$(URL_qemu)" >> $@
-	@echo -e "\nGDB:\n$(URL_gdb)" >> $@
-	@echo -e "\nGCC (i386):\n$(VERSION_i386_gcc)" >> $@
-	@echo -e "\nGCC (powerpc):\n$(VERSION_powerpc_gcc)" >> $@
-	@echo -e "\nNewlib:\n$(URL_newlib)" >> $@
-	@echo >> $@
+diff = env LC_ALL=C TZ=UTC0 diff -Naur
+patch_test = patch --dry-run -Np1
 
-.PHONY: force_export
-force_export:
+create-patch-linux-2.6: $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
+create-patch-linux-2.6-vmi: $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi)
+create-patch-linux-2.4: $(ARCHIVE_DIR)/$(TARBALL_linux-2.4)
+create-patch-xen-2: $(ARCHIVE_DIR)/$(TARBALL_xen-2)
+create-patch-xen-3: $(ARCHIVE_DIR)/$(TARBALL_xen-3)
 
-work/%.export: force_export
-ifeq ($(REUSE),1)
-	@echo Reusing the prior CVS export module: $@
-	[ -d $@ ]
-else
-	@echo Removing the prior CVS export module: $@
-	$(Q) rm -rf $@
-	@echo Exporting the CVS module $(basename $(@F)): $@
-	$(Q) (cd $(@D) && $(CVS_EXPORT) -d $(@F) $(CVS_MOD_$(basename $(@F))))
-endif
+create-pristine = echo "Creating $(SRCDIR)/$(UNPACK_$(1)).pristine" \
+    && if [ ! "-d $(SRCDIR)/$(UNPACK_$(1)).pristine" ] ; \
+    then mkdir -p $(SRCDIR)/$(UNPACK_$(1)).pristine \
+    && cd $(SRCDIR)/$(UNPACK_$(1)).pristine \
+    && tar --strip-components=1 $(call untar_opts,$(TARBALL_$(1))) $(ARCHIVE_DIR)/$(TARBALL_$(1)) \
+    ; fi
 
+create-patch = echo "Creating $(UNPACK_$(1)).patch" \
+    && cd $(SRCDIR) \
+    && $(diff) $(UNPACK_$(1)).pristine $(UNPACK_$(1)) > $(CURDIR)/$(UNPACK_$(1)).patch \
+    ; echo "Testing $(UNPACK_$(1)).patch" \
+    && cd $(UNPACK_$(1)).pristine \
+    && $(patch_test) < $(CURDIR)/$(UNPACK_$(1)).patch
 
-%.patch:
-	@echo Creating the diff.
-	@# Ignore the exit value, since diff returns non-error values > 0
-	-$(Q) (cd work && $(DIFF) $(UNPACK_DIR_$(basename $(@F))) $(basename $(@F)).export) > $@
-	@echo Testing the patch.
-	$(Q) cd work/$(UNPACK_DIR_$(basename $(@F))) && $(PATCH_TEST) < ../../$@
-
-######################################################################
-#
-# Linux patch.
-#
-######################################################################
-
-work/$(UNPACK_linux-2.6): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
-	@echo Extracting the archive.
-	$(Q) cd work && tar jxf $<
-
-linux-2.6.patch: work/linux-2.6.export work/$(UNPACK_linux-2.6)
-
-######################################################################
-#
-# binutils patch.
-#
-######################################################################
-
-work/$(UNPACK_binutils): $(ARCHIVE_DIR)/$(TARBALL_binutils)
-	@echo Extracting the archive.
-	$(Q) cd work && tar jxf $<
-
-binutils.patch: work/binutils.export work/$(UNPACK_binutils)
-
-######################################################################
-#
-# Xen patch.
-#
-######################################################################
-
-work/$(UNPACK_xen-2): $(ARCHIVE_DIR)/$(TARBALL_xen-2)
-	@echo Extracting the archive.
-	$(Q) cd work && tar zxf $<
-
-xen-export-clean: work/xen-2.0.export
-	@echo Cleaning the export
-	rm -f work/xen-2.0.export/c.img
-	rm -f work/xen-2.0.export/ramdisk
-	rm -f work/xen-2.0.export/run.sh
-
-xen-2.0.patch: xen-export-clean work/$(UNPACK_xen-2)
+create-patch-%:
+	$(Q) $(call create-pristine,$*)
+	$(Q) $(call create-patch,$*)
+	@echo "Finished $@"
 
