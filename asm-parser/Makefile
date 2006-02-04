@@ -11,11 +11,14 @@ O ?= .
 antlr_cflags ?= $(shell antlr-config --cflags)
 antlr_libs   ?= $(shell antlr-config --libs)
 
+.PHONY: all
 all: $(O)/afterburner
 
 CXXFLAGS  += -Wall -O2 $(antlr_cflags) -I.
 LIBS    += $(antlr_libs)
 
+.PHONY: afterburner
+afterburner: $(O)/afterburner
 $(O)/afterburner: $(O)/afterburner.o \
                   $(O)/AsmLexer.o $(O)/AsmParser.o $(O)/AsmTreeParser.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
@@ -24,6 +27,15 @@ $(O)/afterburner.o: AsmLexer.hpp AsmParser.hpp AsmTreeParser.hpp afterburner.cpp
 $(O)/AsmParser.o: AsmParser.hpp AsmParser.cpp
 $(O)/AsmLexer.o: AsmLexer.hpp AsmLexer.cpp
 $(O)/AsmTreeParser.o: AsmTreeParser.hpp AsmTreeParser.cpp
+
+$(O)/autovmi.o: VmiCallsParser.hpp VmiCallsLexer.hpp autovmi.cpp
+$(O)/VmiCallsParser.o: VmiCallsParser.hpp VmiCallsParser.cpp
+$(O)/VmiCallsLexer.o: VmiCallsLexer.hpp VmiCallsLexer.cpp
+
+.PHONY: autovmi
+autovmi: $(O)/autovmi
+$(O)/autovmi: $(O)/autovmi.o $(O)/VmiCallsLexer.o $(O)/VmiCallsParser.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
 $(O)/%.o: %.cpp
 	g++ $(CXXFLAGS) -c -o $@ $<
@@ -40,11 +52,14 @@ clean:
 ifdef rebuild-antlr
 
 .PHONY: compile-grammar
-compile-grammar: AsmParser.cpp
+compile-grammar: AsmParser.cpp VmiCallsParser.cpp
 
 AsmTreeParser.cpp AsmTreeParser.hpp: Asm.g
 AsmParser.cpp AsmParser.hpp: Asm.g
 AsmLexer.hpp AsmLexer.cpp: Asm.g
+
+VmiCallsParser.cpp VmiCallsParser.hpp: VmiCalls.g
+VmiCallsLexer.cpp VmiCallsLexer.hpp: VmiCalls.g
 
 %Lexer.hpp %Lexer.cpp \
 %Parser.cpp %Parser.hpp \
