@@ -86,20 +86,27 @@ vmiAttribute
     ;
 
 vmiType
-    : "VMI_DTR"
-    | "VMI_SELECTOR"
-    | "VMI_PTE"
-    | "VMI_PAE_PTE"
-    | "VMI_BOOL"
-    | "VMI_INT"
-    | "VMI_INT8"
-    | "VMI_UINT8"
-    | "VMI_UINT16"
-    | "VMI_UINT32" 
-    | "VMI_UINT64" 
+    : ("VMI_DTR"
+      | "VMI_SELECTOR"
+      | "VMI_PTE"
+      | "VMI_PAE_PTE"
+      | "VMI_BOOL"
+      | "VMI_INT"
+      | "VMI_INT8"
+      | "VMI_UINT8"
+      | "VMI_UINT16"
+      | "VMI_UINT32" 
+      | "VMI_UINT64" 
+      )				{ ##->setType(ASTVmiType); }
     ;
 
-cType: "int" | "char";
+cType
+    : ("int" 
+      | "char"
+      | "void"
+      )
+	{ ##->setType(ASTCType); }
+    ;
 
 vmiArgs
     : "VMI_ARGS"! LPAREN! (vmiArgList) RPAREN!
@@ -107,10 +114,9 @@ vmiArgs
     ;
 vmiArgList: vmiArg (COMMA! vmiArg)* ;
 vmiArg
-    : vmiType (STAR)? Name
-    | ("void" STAR) => "void" STAR Name
-    | "void"
-    | cType (STAR)? Name
+    : ((vmiType | cType) (STAR)? Name)
+	{ ## = #([ASTVmiArg, "vmi arg"], ##); }
+    | "void"!
     ;
 
 vmiInputs
@@ -166,8 +172,11 @@ astDefs
     | ASTVmiFlatSS
     | ASTVmiVolatile
     | ASTVmiArgs
+    | ASTVmiArg
     | ASTVmiInput
     | ASTVmiOutput
+    | ASTVmiType
+    | ASTCType
     ;
 
 class VmiCallsLexer extends Lexer;
@@ -212,11 +221,6 @@ protected CPPComment: '/''/' ( ~('\n') )* ;
 protected Letter : 'a'..'z' | 'A'..'Z' | '_';
 protected Digit  : '0'..'9';
 
-/*
-String : '"' ( StringEscape | ~('\\'|'"') )* '"' ;
-protected StringEscape : '\\' . ;
-*/
-
 // Note: For all literals that we wish to lookup in the hash table, there
 // must be a Lexer rule that can match it, with the testLiterals option 
 // enabled.
@@ -232,5 +236,134 @@ AsmInputRegSpecifier
     ;
 AsmOutputRegSpecifier
     : '"' ('=' | '+') ('a' | 'b' | 'c' | 'd' | 'A' | 'D' | 'S') '"'
+    ;
+
+
+
+class VmiCallsHtmlEmitter extends TreeParser;
+{
+protected:
+    void out( char *s )
+        { std::cout << s; }
+    void out( unsigned u )
+        { std::cout << u; }
+    void out( antlr::RefAST n )
+        { std::cout << n->getText(); }
+    void td( antlr::RefAST n )
+	{ std::cout << "<td>" << n->getText() << "</td>"; }
+    void td( char *s )
+	{ std::cout << "<td>" << s << "</td>"; }
+}
+
+vmiCalls
+    : #(ASTVmiCalls		{ out("<table>\n"); }
+        (vmiDefs)?		{ out("</table>\n"); }
+       )
+    ;
+
+vmiDefs
+    : ( { out("<tr style=\"background:lightgreen;\">"); } 
+        vmiDef
+	{ out("</tr>\n"); }
+      )+
+    ;
+
+vmiDef
+    : vmiProc
+    | vmiFunc
+    | vmiJump
+    | vmiSpace
+    ;
+
+vmiSpace
+    : #(ASTVmiSpace n:Name)	{ out("<td>Space "); out(n); out("</td>"); }
+    ;
+
+vmiProc
+    : #(ASTVmiProc n:Name		{ out("<td> void "); out(n); }
+        vmiArgs vmiOutputs vmiInputs vmiClobber vmiAttributes
+       { out("</td>"); } )
+    ;
+
+vmiJump
+    : #(ASTVmiJump n:Name		{ out("<td> Jump "); out(n); }
+        vmiArgs vmiOutputs vmiInputs vmiClobber vmiAttributes
+       { out("</td>"); } )
+    ;
+
+vmiFunc
+    : #(ASTVmiFunc n:Name r:ASTVmiType	
+		{ out("<td>"); out(r); out(" "); out(n); }
+        vmiArgs vmiOutputs vmiInputs vmiClobber vmiAttributes
+       { out("</td>"); } )
+    ;
+
+vmiArgs
+    : #(ASTVmiArgs {out("(");} 
+        (vmiArg ({out(", ");} vmiArg)*
+	 | {out("void");}
+	)
+        {out(")");} )
+    ;
+
+vmiArg
+    : #(ASTVmiArg
+        (v:ASTVmiType {out(v);} | c:ASTCType {out(c);}) 
+	(s:STAR		{out(s);} )? 
+	n:Name		{out(" "); out(n);}
+       )
+    ;
+
+vmiOutputs
+    : #(ASTVmiOutput ({out("</tr>\n<tr><td>Outputs: ");} 
+        asmOutput ({out(", ");} asmOutput)* {out("</td>");})?
+       )
+    ;
+
+asmOutput
+    : #(ASTAsmOutput r:AsmOutputRegSpecifier	{out(r); out("(");}
+        (s:STAR {out(" "); out(s);} )?
+	n:Name					{out(n); out(")");}
+       )
+    ;
+
+vmiInputs
+    : #(ASTVmiInput ({out("</tr>\n<tr><td>Inputs: ");} 
+        asmInput ({out(", ");} asmInput)* {out("</td>");})?
+       )
+    ;
+
+asmInput
+    : #(ASTAsmInput r:AsmInputRegSpecifier	{out(r); out("(");}
+        expr					{out(")");}
+       )
+    ;
+
+primitive
+    : n:Name	{ out(n); }
+    | i:Int 	{ out(i); }
+    | h:Hex	{ out(h); }
+    ;
+subexpr: {out("(");}  expr  {out(")");};
+expr
+    : #(ASTCast {out("(");} 
+          (v:ASTVmiType {out(v);} | c:ASTCType {out(c);} ) {out(")");} 
+	  subexpr)
+    | #(r:RSHIFT expr ({out(r);} expr)+)
+    | primitive
+    ;
+
+vmiClobber: ASTVmiAsmClobber | ASTVmiMemClobber;
+
+vmiAttributes
+    : #(ASTVmiAttributes ({out("</tr>\n<tr><td>Attributes: ");}
+        vmiAttribute ({out(", ");} vmiAttribute)*  {out("</td>");})?
+       )
+    ;
+vmiAttribute
+    : ASTVmiVolatile	{ out("volatile"); }
+    | ASTVmiFlat	{ out("flat"); }
+    | ASTVmiNotFlat	{ out("not flat"); }
+    | ASTVmiFlatSS	{ out("flat SS+CS"); }
     ;
 

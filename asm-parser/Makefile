@@ -37,6 +37,11 @@ autovmi: $(O)/autovmi
 $(O)/autovmi: $(O)/autovmi.o $(O)/VmiCallsLexer.o $(O)/VmiCallsParser.o
 	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 
+.PHONY: vmi2html
+vmi2html: $(O)/vmi2html
+$(O)/vmi2html: $(O)/vmi2html.o $(O)/VmiCallsLexer.o $(O)/VmiCallsParser.o $(O)/VmiCallsHtmlEmitter.o
+	g++ $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+
 $(O)/%.o: %.cpp
 	g++ $(CXXFLAGS) -c -o $@ $<
 
@@ -60,6 +65,7 @@ AsmLexer.hpp AsmLexer.cpp: Asm.g
 
 VmiCallsParser.cpp VmiCallsParser.hpp: VmiCalls.g
 VmiCallsLexer.cpp VmiCallsLexer.hpp: VmiCalls.g
+VmiCallsHtmlEmitter.cpp VmiCallsHtmlEmitter.hpp: VmiCalls.g
 
 %Lexer.hpp %Lexer.cpp \
 %Parser.cpp %Parser.hpp \
@@ -73,4 +79,5 @@ clean-antlr:
 	-rm -f *.class
 	-rm -f *TokenTypes.txt *TokenTypes.hpp
 	-rm -f *Parser.hpp *Parser.cpp *Lexer.hpp *Lexer.cpp
+	-rm -f *Emitter.hpp *Emitter.cpp
 

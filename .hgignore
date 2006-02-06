@@ -5,6 +5,8 @@ CVS/.*
 .*Lexer.hpp$
 .*Parser.cpp$
 .*Parser.hpp$
+.*Emitter.cpp$
+.*Emitter.hpp$
 .*TokenTypes.txt$
 .*TokenTypes.hpp$
 \.#.*
