@@ -10,22 +10,6 @@ diff -Naur linux-2.4.31.pristine/Makefile linux-2.4.31/Makefile
  
  KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
  
-@@ -98,6 +98,15 @@
- endif
- AFLAGS := -D__ASSEMBLY__ $(CPPFLAGS)
- 
-+ifdef CONFIG_AFTERBURN
-+afterburn_dir = $(subst ",,$(CONFIG_AFTERBURN_DIR))
-+ifneq ("$(AFTERBURN_BINUTILS)", "")
-+afterburn_gcc_flags = -B $(AFTERBURN_BINUTILS)
-+endif
-+CFLAGS += -include $(afterburn_dir)/afterburn-instr.h $(afterburn_gcc_flags)
-+AFLAGS += -include $(afterburn_dir)/afterburn-instr.S $(afterburn_gcc_flags)
-+endif
-+
- #
- # ROOT_DEV specifies the default root-device when making the image.
- # This can be either FLOPPY, CURRENT, /dev/xxxx or empty, in which case
 @@ -128,7 +137,7 @@
  NETWORKS	=net/network.o
  
@@ -55,7 +39,7 @@ diff -Naur linux-2.4.31.pristine/Makefile linux-2.4.31/Makefile
 diff -Naur linux-2.4.31.pristine/afterburn/Config.in linux-2.4.31/afterburn/Config.in
 --- linux-2.4.31.pristine/afterburn/Config.in	1970-01-01 00:00:00.000000000 +0000
 +++ linux-2.4.31/afterburn/Config.in	2005-11-17 17:35:53.000000000 +0000
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,42 @@
 +
 +mainmenu_option next_comment
 +comment "Afterburn"
@@ -63,7 +47,6 @@ diff -Naur linux-2.4.31.pristine/afterburn/Config.in linux-2.4.31/afterburn/Conf
 +bool "Afterburn pre-virtualization?" CONFIG_AFTERBURN
 +if [ "$CONFIG_AFTERBURN" = "y" ] ; then
 +
-+  string "Path to the build directory of your Afterburn wedge" CONFIG_AFTERBURN_DIR /home/joshua/afterburn/afterburn-wedge/build-empty
 +  bool "Support the L4Ka::Pistachio environment?" CONFIG_AFTERBURN_L4KA
 +  bool "Support the Xen environment?" CONFIG_AFTERBURN_XEN
 +  bool "Permit pass-through device access?" CONFIG_AFTERBURN_DEVICE_PASSTHRU

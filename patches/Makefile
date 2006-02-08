@@ -105,11 +105,10 @@ endif
 #
 ######################################################################
 VERSION_linux-2.6 = 2.6.9
-#VERSION_linux-2.6 = 2.6.11
 #VERSION_linux-2.6 = 2.6.12.3
 VERSION_linux-2.6-vmi = 2.6.12.3
 VERSION_linux-2.4 = 2.4.31
-VERSION_linux-2.4 = 2.4.28
+#VERSION_linux-2.4 = 2.4.28
 VERSION_binutils = 2.15.91.0.2
 VERSION_xen-2 = 2.0.2
 #VERSION_xen-2 = 2.0.7
@@ -136,8 +135,7 @@ VERSION_gcc = $(VERSION_$(TARGET_ARCH)_gcc)
 #
 ######################################################################
 
-TARBALLS += linux-2.6 binutils xen-2 gcc newlib idl4 qemu qemu-floppy gdb \
-  module-init-tools
+TARBALLS += linux-2.6 xen-2 idl4 qemu qemu-floppy antlr
 CVS_LIST += pistachio marzipan
 
 TARBALL_linux-2.6 = linux-$(VERSION_linux-2.6).tar.bz2
@@ -258,6 +256,7 @@ help::
 	@echo "  help-build"
 	@echo "  help-boot"
 	@echo "  help-clean"
+	@echo "  help-create-patch"
 	@echo
 	@echo "All retrieved source archives are stored in '$(ARCHIVE_DIR)'."
 	@echo "Source packages are unarchived into '$(SRCDIR)'."
@@ -1243,7 +1242,7 @@ $(BOOT_DIR)/bzImage-$(VERSION_linux-2.4): $(SRCDIR)/$(UNPACK_linux-2.4)/arch/i38
 	$(Q) $(BOOT_INSTALL_CMD)
 
 .PRECIOUS: $(SRCDIR)/$(UNPACK_linux-2.4)/.config
-$(SRCDIR)/$(UNPACK_linux-2.4)/.config: ../afterburn-wedge/doc/linux-2.4/dot-config
+$(SRCDIR)/$(UNPACK_linux-2.4)/.config: ../afterburn-wedge/doc/linux-2.4/dot-config receipts/patch-linux-$(VERSION_linux-2.4)
 	$(Q) mkdir -p $(@D)
 	$(Q) cp $< $@
 	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.4) && make -s oldconfig && make -s dep)
@@ -1251,20 +1250,24 @@ $(SRCDIR)/$(UNPACK_linux-2.4)/.config: ../afterburn-wedge/doc/linux-2.4/dot-conf
 .PRECIOUS: $(SRCDIR)/$(UNPACK_linux-2.4)/vmlinux $(SRCDIR)/$(UNPACK_linux-2.4)/arch/i386/boot/bzImage
 $(SRCDIR)/$(UNPACK_linux-2.4)/vmlinux \
 $(SRCDIR)/$(UNPACK_linux-2.4)/arch/i386/boot/bzImage: \
-		receipts/patch-linux-$(VERSION_linux-2.4) \
 		$(SRCDIR)/$(UNPACK_linux-2.4)/.config
 	@echo Building Linux in $(SRCDIR)/$(UNPACK_linux-2.4)
 	$(Q) mkdir -p $(INSTALL_ROOT)
-	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.4) && make -s bzImage)
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.4) && make -s CC=aftercc bzImage)
 
-rebuild-linux-2.4:
-	-$(Q) rm -f $(BOOT_DIR)/$(subst rebuild-linux-2.4,bzImage-$(VERSION_linux-2.4),$@)
-	-$(Q) rm -f $(BOOT_DIR)/$(subst rebuild-linux-2.4,vmlinuz-$(VERSION_linux-2.4),$@)
-	-$(Q) rm -f $(SRCDIR)/$(subst rebuild-linux-2.4,$(UNPACK_linux-2.4),$@)/vmlinux
-	-$(Q) rm -f $(SRCDIR)/$(subst rebuild-linux-2.4,$(UNPACK_linux-2.4),$@)/vmlinux.stripped
-	-$(Q) rm -f $(SRCDIR)/$(subst rebuild-linux-2.4,$(UNPACK_linux-2.4),$@)/vmlinuz
-	-$(Q) rm -f $(SRCDIR)/$(subst rebuild-linux-2.4,$(UNPACK_linux-2.4),$@)/arch/i386/boot/bzImage
-	make $(subst rebuild,build,$@)
+reconfig-linux-2.4: $(SRCDIR)/$(UNPACK_linux-2.4)/.config
+	$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.4) && make -s menuconfig && make -s dep)
+
+clean-linux-2.4:
+	-$(Q) (cd $(SRCDIR)/$(UNPACK_linux-2.4) && make -s clean)
+	-$(Q) rm -f $(addprefix $(SRCDIR)/$(UNPACK_linux-2.4)/,vmlinux vmlinux.stripped vmlinuz arch/i386/boot/bzImage)
+
+uninstall-linux-2.4:
+	-$(Q) rm -rf $(BOOT_DIR)/bzImage-$(VERSION_linux-2.4)
+	-$(Q) rm -rf $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.4)
+
+rebuild-linux-2.4: clean-linux-2.4 uninstall-linux-2.4
+	$(MAKE) build-linux-2.4
 
 ######################################################################
 # Build Linux 2.6 with VMI
@@ -1314,7 +1317,7 @@ $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config: ../afterburn-wedge/doc/linux-2.6
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/arch/i386/boot/bzImage
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux \
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/arch/i386/boot/bzImage: \
-		patch-linux-2.6-vmi \
+		receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi \
 		$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config
 	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$*
 	$(Q) mkdir -p $(INSTALL_ROOT)
@@ -1398,7 +1401,7 @@ $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinux $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/arch/i386/boot/bzImage
 $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/vmlinux \
 $(BUILD_DIR)/$(UNPACK_linux-2.6)-%/arch/i386/boot/bzImage: \
-		patch-linux-2.6 \
+		receipts/patch-linux-$(VERSION_linux-2.6) \
 		$(BUILD_DIR)/$(UNPACK_linux-2.6)-%/.config
 	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6)-$*
 	$(Q) mkdir -p $(INSTALL_ROOT)

@@ -25,31 +25,6 @@ diff -Naur xen-2.0/xen/Rules.mk xen-2.0.6/xen/Rules.mk
  
  include $(BASEDIR)/arch/$(TARGET_ARCH)/Rules.mk
  
-diff -Naur xen-2.0/xen/arch/x86/Makefile xen-2.0.6/xen/arch/x86/Makefile
---- xen-2.0/xen/arch/x86/Makefile	2005-05-22 10:56:28.000000000 +0000
-+++ xen-2.0.6/xen/arch/x86/Makefile	2005-06-17 16:29:02.000000000 +0000
-@@ -14,8 +14,8 @@
- 
- default: $(TARGET)
- 
--$(TARGET): $(TARGET)-syms boot/mkelf32
--	./boot/mkelf32 $(TARGET)-syms $(TARGET) 0x100000
-+$(TARGET): $(TARGET)-syms
-+	$(OBJCOPY) --change-addresses 0x3c00000 $(TARGET)-syms $(TARGET)
- 
- $(CURDIR)/arch.o: $(OBJS)
- 	$(LD) $(LDFLAGS) -r -o $@ $(OBJS)
-diff -Naur xen-2.0/xen/arch/x86/Rules.mk xen-2.0.6/xen/arch/x86/Rules.mk
---- xen-2.0/xen/arch/x86/Rules.mk	2005-05-22 10:56:27.000000000 +0000
-+++ xen-2.0.6/xen/arch/x86/Rules.mk	2005-06-17 16:29:02.000000000 +0000
-@@ -3,6 +3,7 @@
- 
- CC := gcc
- LD := ld
-+OBJCOPY := objcopy
- 
- CFLAGS  := -nostdinc -fno-builtin -fno-common -fno-strict-aliasing
- CFLAGS  += -iwithprefix include -Wall -Werror -pipe
 diff -Naur xen-2.0/xen/arch/x86/x86_32/entry.S xen-2.0.6/xen/arch/x86/x86_32/entry.S
 --- xen-2.0/xen/arch/x86/x86_32/entry.S	2005-05-22 10:56:32.000000000 +0000
 +++ xen-2.0.6/xen/arch/x86/x86_32/entry.S	2005-06-17 16:29:02.000000000 +0000

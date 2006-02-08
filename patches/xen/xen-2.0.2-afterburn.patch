@@ -10,34 +10,6 @@ diff -Naur xen-2.0/xen/Rules.mk xen-2.0.2/xen/Rules.mk
  
  include $(BASEDIR)/arch/$(TARGET_ARCH)/Rules.mk
  
-diff -Naur xen-2.0/xen/arch/x86/Makefile xen-2.0.2/xen/arch/x86/Makefile
---- xen-2.0/xen/arch/x86/Makefile	2005-01-04 03:46:06.000000000 +0000
-+++ xen-2.0.2/xen/arch/x86/Makefile	2005-06-11 08:36:22.000000000 +0000
-@@ -12,11 +12,11 @@
- 
- OBJS := $(subst $(TARGET_SUBARCH)/asm-offsets.o,,$(OBJS))
- 
--default: boot/$(TARGET_SUBARCH).o $(OBJS) boot/mkelf32
-+default: boot/$(TARGET_SUBARCH).o $(OBJS)
- 	$(LD) $(LDFLAGS) -r -o arch.o $(OBJS)
- 	$(LD) $(LDFLAGS) -T $(TARGET_SUBARCH)/xen.lds -N \
- 	    boot/$(TARGET_SUBARCH).o $(ALL_OBJS) -o $(TARGET)-syms
--	./boot/mkelf32 $(TARGET)-syms $(TARGET) 0x100000
-+	$(OBJCOPY) --change-addresses 0x3c00000 $(TARGET)-syms $(TARGET)
- 
- asm-offsets.s: $(TARGET_SUBARCH)/asm-offsets.c
- 	$(CC) $(CFLAGS) -S -o $@ $<
-diff -Naur xen-2.0/xen/arch/x86/Rules.mk xen-2.0.2/xen/arch/x86/Rules.mk
---- xen-2.0/xen/arch/x86/Rules.mk	2005-01-04 03:46:04.000000000 +0000
-+++ xen-2.0.2/xen/arch/x86/Rules.mk	2005-06-11 08:27:11.000000000 +0000
-@@ -3,6 +3,7 @@
- 
- CC := gcc
- LD := ld
-+OBJCOPY := objcopy
- 
- CFLAGS  := -nostdinc -fno-builtin -fno-common -fno-strict-aliasing
- CFLAGS  += -iwithprefix include -Wall -Werror -pipe
 diff -Naur xen-2.0/xen/arch/x86/domain.c xen-2.0.2/xen/arch/x86/domain.c
 --- xen-2.0/xen/arch/x86/domain.c	2005-01-04 03:46:07.000000000 +0000
 +++ xen-2.0.2/xen/arch/x86/domain.c	2005-06-03 22:41:37.000000000 +0000
