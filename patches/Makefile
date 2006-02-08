@@ -361,14 +361,6 @@ patch-qemu: receipts/patch-qemu-$(VERSION_qemu)
 patch-idl4: receipts/patch-idl4-$(VERSION_idl4)
 patch-pistachio: receipts/patch-pistachio
 
-receipts/patch-linux-$(VERSION_linux-2.6): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
-receipts/patch-linux-$(VERSION_linux-2.6-vmi): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi)
-receipts/patch-linux-$(VERSION_linux-2.4): $(ARCHIVE_DIR)/$(TARBALL_linux-2.4)
-receipts/patch-xen-$(VERSION_xen-2): $(ARCHIVE_DIR)/$(TARBALL_xen-2)
-receipts/patch-xen-$(VERSION_xen-3): $(ARCHIVE_DIR)/$(TARBALL_xen-3)
-receipts/patch-qemu-$(VERSION_qemu): $(ARCHIVE_DIR)/$(TARBALL_qemu)
-receipts/patch-idl4-$(VERSION_idl4): $(ARCHIVE_DIR)/$(TARBALL_idl4)
-
 PATCH_FILE-linux-2.6 = $(CURDIR)/linux/linux-$(VERSION_linux-2.6)-big-afterburn.patch
 PATCH_FILE-linux-2.6-vmi = $(CURDIR)/linux/linux-$(VERSION_linux-2.6-vmi)-vmi.patch
 PATCH_FILE-linux-2.4 = $(CURDIR)/linux/linux-$(VERSION_linux-2.4)-big-afterburn.patch
@@ -377,6 +369,27 @@ PATCH_FILE-xen-2 = $(CURDIR)/xen/xen-$(VERSION_xen-2)-afterburn.patch
 PATCH_FILE-xen-3 = $(CURDIR)/xen/xen-$(VERSION_xen-3)-afterburn.patch
 PATCH_FILE-idl4 = $(CURDIR)/idl4/idl4-$(VERSION_idl4).patch
 PATCH_FILE-pistachio = $(CURDIR)/pistachio/pistachio-kernel-perfmon.patch
+
+receipts/patch-linux-$(VERSION_linux-2.6): type=linux-2.6
+receipts/patch-linux-$(VERSION_linux-2.6): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6) $(PATCH_FILE-linux-2.6)
+
+receipts/patch-linux-$(VERSION_linux-2.6-vmi): type=linux-2.6-vmi
+receipts/patch-linux-$(VERSION_linux-2.6-vmi): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi) $(PATCH_FILE-linux-2.6-vmi)
+
+receipts/patch-linux-$(VERSION_linux-2.4): type=linux-2.4
+receipts/patch-linux-$(VERSION_linux-2.4): $(ARCHIVE_DIR)/$(TARBALL_linux-2.4) $(PATCH_FILE-linux-2.4)
+
+receipts/patch-xen-$(VERSION_xen-2): type=xen-2
+receipts/patch-xen-$(VERSION_xen-2): $(ARCHIVE_DIR)/$(TARBALL_xen-2) $(PATCH_FILE-xen-2)
+
+receipts/patch-xen-$(VERSION_xen-3): type=xen-3
+receipts/patch-xen-$(VERSION_xen-3): $(ARCHIVE_DIR)/$(TARBALL_xen-3) $(PATCH_FILE-xen-3)
+
+receipts/patch-qemu-$(VERSION_qemu): type=qemu
+receipts/patch-qemu-$(VERSION_qemu): $(ARCHIVE_DIR)/$(TARBALL_qemu) $(PATCH_FILE-qemu)
+
+receipts/patch-idl4-$(VERSION_idl4): type=idl4
+receipts/patch-idl4-$(VERSION_idl4): $(ARCHIVE_DIR)/$(TARBALL_idl4) $(PATCH_FILE-idl4)
 
 untar_.gz  = -zxf
 untar_.tgz = -zxf
@@ -393,18 +406,18 @@ receipts/patch-pistachio: receipts/cvs-pistachio $(PATCH_FILE-pistachio)
 
 
 receipts/patch-%:
-	@echo Extracting the archive $(TARBALL_$*) to apply a new patch.
-	@if [ -d $(SRCDIR)/$(UNPACK_$*) ] ; then \
-	  echo $(SRCDIR)/$(UNPACK_$*) already exists. ; \
+	@echo Extracting the archive $(TARBALL_$(type)) to apply a new patch.
+	@if [ -d $(SRCDIR)/$(UNPACK_$(type)) ] ; then \
+	  echo $(SRCDIR)/$(UNPACK_$(type)) already exists. ; \
 	  echo Please remove it first. ; \
 	  exit 1 ; \
 	fi
-	$(Q) mkdir -p $(SRCDIR)/$(UNPACK_$*) receipts
-	$(Q) (cd $(SRCDIR)/$(UNPACK_$*) && tar --strip-components=1 $(call untar_opts,$(TARBALL_$*)) $(ARCHIVE_DIR)/$(TARBALL_$*))
+	$(Q) mkdir -p $(SRCDIR)/$(UNPACK_$(type)) receipts
+	$(Q) (cd $(SRCDIR)/$(UNPACK_$(type)) && tar --strip-components=1 $(call untar_opts,$(TARBALL_$(type))) $(ARCHIVE_DIR)/$(TARBALL_$(type)))
 	@echo Applying the patch.
-	$(Q) (cd $(SRCDIR)/$(UNPACK_$*) && $(PATCH) < $(PATCH_FILE-$*))
+	$(Q) (cd $(SRCDIR)/$(UNPACK_$(type)) && $(PATCH) < $(PATCH_FILE-$(type)))
 	$(Q) touch $@
-	@echo The newly patched project: $(SRCDIR)/$(UNPACK_$*)
+	@echo The newly patched project: $(SRCDIR)/$(UNPACK_$(type))
 
 ######################################################################
 # Build binutils
@@ -969,9 +982,13 @@ build-utils:: build-afterburner
 clean-utils:: clean-afterburner
 
 .PHONY: build-afterburner
-build-afterburner: $(INSTALL_ROOT)/bin/afterburner 
+build-afterburner: $(INSTALL_ROOT)/bin/afterburner $(INSTALL_ROOT)/bin/aftercc
 
 $(INSTALL_ROOT)/bin/afterburner: $(BUILD_DIR)/asm-parser/afterburner
+	$(Q) mkdir -p $(INSTALL_ROOT)/bin
+	$(Q) cp $< $@
+
+$(INSTALL_ROOT)/bin/aftercc: ../asm-parser/aftercc
 	$(Q) mkdir -p $(INSTALL_ROOT)/bin
 	$(Q) cp $< $@
 
@@ -1009,7 +1026,9 @@ help-clean::
 	@echo "    clean-wedge-kaxen-vmi"
 build-runtime-i386:: build-wedge
 clean-runtime-i386:: clean-wedge
-build-vmi:: build-wedge-kaxen-vmi-passthru build-wedge-kaxen-vmi
+build-vmi:: build-wedge-kaxen-vmi-passthru
+
+build-wedge: build-wedge-l4ka-passthru build-wedge-kaxen-passthru
 
 build-wedge-prereqs-l4ka: receipts/install-pistachio-user \
   receipts/install-idl4-$(VERSION_idl4) receipts/cvs-marzipan
