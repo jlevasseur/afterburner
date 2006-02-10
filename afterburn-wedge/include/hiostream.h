@@ -26,7 +26,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: hiostream.h,v 1.6 2005/04/13 15:47:31 joshua Exp $
+ * $Id: hiostream.h,v 1.7 2006-02-10 14:18:46 stoess Exp $
  *
  ********************************************************************/
 
@@ -45,6 +45,8 @@ public:
     };
 
 protected:
+    void print_color_escape( io_color_e color, char base );
+    void print_attribute( char attr );
     io_color_e color;
     io_color_e background;
 
@@ -60,40 +62,13 @@ public:
 
     // Color functions.
     virtual void set_color( io_color_e new_color )
-	{ this->color = new_color; }
-    virtual void set_background( io_color_e new_color )
-	{ this->background = new_color; }
-    virtual void reset_attributes()
-	{ this->background = this->color = unknown; }
-
-    io_color_e get_color()		{ return this->color; }
-    io_color_e get_background()		{ return this->background; }
-};
-
-class hiostream_void_t : public hiostream_driver_t
-{
- public:
-	void print_char(char ch) {};
-	char get_blocking_char() {return '\0';};
-};
-
-class hiostream_ansi_t : public hiostream_driver_t
-{
-protected:
-    void print_color_escape( io_color_e color, char base );
-    void print_attribute( char attr );
-
-public:
-    virtual void set_color( io_color_e new_color )
     { 
-	hiostream_driver_t::set_color( new_color );
 	if( new_color != unknown )
 	    print_color_escape( new_color, '3' ); 
     }
 
     virtual void set_background( io_color_e new_color )
     {
-	hiostream_driver_t::set_background( new_color );
 	if( new_color != unknown )
 	    print_color_escape( new_color, '4' ); 
     }
@@ -102,10 +77,10 @@ public:
 	{ print_attribute( '1' ); }
 
     virtual void reset_attributes()
-    { 
-	hiostream_driver_t::reset_attributes();
-	print_attribute( '0' ); 
-    }
+	{ print_attribute( '0' );  }
+    
+    io_color_e get_color()		{ return this->color; }
+    io_color_e get_background()		{ return this->background; }
 };
 
 class hiostream_t

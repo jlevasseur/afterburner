@@ -60,16 +60,24 @@ extern void serial8250_receive_byte( u8_t byte );
 extern "C" void xen_event_callback_wrapper();
 extern "C" void xen_event_failsafe_wrapper();
 
+#if defined(CONFIG_XEN_2_0)
 static volatile u8_t &xen_upcall_pending = 
 	xen_shared_info.vcpu_data[0].evtchn_upcall_pending;
 static volatile u8_t &xen_upcall_mask = 
 	xen_shared_info.vcpu_data[0].evtchn_upcall_mask;
-static volatile u32_t &xen_evtchn_pending = xen_shared_info.evtchn_pending[0];
+static volatile u32_t &xen_evtchn_pending = 
+	xen_shared_info.evtchn_pending[0];
 static volatile u32_t &xen_evtchn_pending_sel = 
-#ifdef CONFIG_XEN_2_0
 	xen_shared_info.evtchn_pending_sel;
 #else
-	xen_shared_info.vcpu_data[0].evtchn_pending_sel;
+static volatile u8_t &xen_upcall_pending = 
+	xen_shared_info.vcpu_info[0].evtchn_upcall_pending;
+static volatile u8_t &xen_upcall_mask = 
+	xen_shared_info.vcpu_info[0].evtchn_upcall_mask;
+static volatile u32_t &xen_evtchn_pending = 
+	((u32_t *)xen_shared_info.evtchn_pending)[0];
+static volatile unsigned long &xen_evtchn_pending_sel = 
+	xen_shared_info.vcpu_info[0].evtchn_pending_sel;
 #endif
 
 static const word_t max_channels = 32;
@@ -81,14 +89,14 @@ static burn_redirect_frame_t *idle_redirect = NULL;
 
 INLINE void channel_unmask( word_t channel )
 {
-    volatile word_t &word = xen_shared_info.evtchn_mask[ channel/(sizeof(word_t)*8) ];
+    volatile word_t &word = ((word_t *)xen_shared_info.evtchn_mask)[ channel/(sizeof(word_t)*8) ];
     word_t bit = channel % (sizeof(word_t)*8);
     bit_clear_atomic( bit, word );
 }
 
 INLINE void channel_mask( word_t channel )
 {
-    volatile word_t &word = xen_shared_info.evtchn_mask[ channel/(sizeof(word_t)*8) ];
+    volatile word_t &word = ((word_t *)xen_shared_info.evtchn_mask)[ channel/(sizeof(word_t)*8) ];
     word_t bit = channel % (sizeof(word_t)*8);
     bit_set_atomic( bit, word );
 }
@@ -132,8 +140,10 @@ void init_xen_callbacks()
 	else 
 	    channel_console = op.u.bind_virq.port;
     }
+#if defined(CONFIG_XEN_2_0)
     else
 	channel_controller = xen_start_info.domain_controller_evtchn;
+#endif
 
     // Enable upcalls.
     xen_upcall_mask = 0;
@@ -314,27 +324,13 @@ xen_event_failsafe( xen_frame_t *frame )
 
 void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
 {
-    u32_t time_version;
-    u64_t current_time, time;
-    cycles_t time_update_cycles;
-
     ASSERT( get_cpu().interrupts_enabled() );
     if( redirect_frame->do_redirect() )
 	return; // We must deliver an interrupt, so cancel the idle.
     idle_redirect = redirect_frame;
 
-    // Get an accurate Xen system clock reading.  Since we read a 64-bit
-    // time value, it isn't atomic on x86.
-    volatile xen_time_info_t *time_info = xen_shared_info.get_time_info();
-    do {
-	time_version = time_info->time_version1;
-	current_time = time_info->system_time; /* nanosecs since boot */
-	time_update_cycles = time_info->tsc_timestamp;
-    } while( time_version != time_info->time_version2 );
-
     cycles_t current_cycles = get_cycles();
-    current_time += (current_cycles - time_update_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
-    time = (current_cycles - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
+    u64_t time = (current_cycles - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
     if( time > 10*1000*1000 ) {
 	// Missed timer.
 	last_timer_cycles = current_cycles;
@@ -345,7 +341,7 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
 	return;
     }
     else
-	time = (10*1000*1000 - time) + current_time;
+	time = (10*1000*1000 - time) + xen_shared_info.get_current_time()*1000;
     // Timeout 10ms from start of last period.
 //    time += 10*1000*1000; /* nanosecs */
 
@@ -353,8 +349,8 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
     // Xen 3.0 is failing to deliver the timeout during the block,
     // so exit the function, but ensure that the compiler still generates
     // the remainder of the function.
-    if( time_version )
-	return;
+//    if( time_version )
+//	return;
 #endif
 
     /* Xen has a silly race condition ... if the time-out event comes between

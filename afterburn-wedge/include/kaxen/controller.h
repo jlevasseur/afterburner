@@ -35,6 +35,8 @@
 #include INC_WEDGE(xen_hypervisor.h)
 #include INC_WEDGE(cpu.h)
 
+#ifdef CONFIG_XEN_2_0
+
 // NOTE: Xen's interface to the domain controller has a massive race condition,
 // which is especially nasty since debug code may try to send a message while
 // other code is sending a message.  Unfortunately we have to live with it.
@@ -71,11 +73,7 @@ public:
 
     bool is_tx_full()
     {
-#ifdef CONFIG_XEN_2_0
 	return (ctrl_if->tx_req_prod - ctrl_if->tx_resp_prod) == CONTROL_RING_SIZE;
-#else
-	return (ctrl_if->tx_ring.req_prod - ctrl_if->tx_ring.rsp_prod) == CONTROL_RING_SIZE;
-#endif
     }
 
 private:
@@ -93,5 +91,20 @@ private:
 };
 
 extern xen_controller_t xen_controller;
+
+#else
+
+class xen_controller_t
+{
+public:
+    void init() {}
+    void console_write( char ch ) {}
+    char console_destructive_read() { return '6'; }
+    void process_async_event( xen_frame_t *frame ) {}
+};
+
+extern xen_controller_t xen_controller;
+
+#endif
 
 #endif	/* __AFTERBURN_WEDGE__INCLUDE__KAXEN__CONTROLLER_H__ */

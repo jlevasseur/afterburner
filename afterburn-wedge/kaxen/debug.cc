@@ -239,7 +239,11 @@ void debugger_enter( xen_frame_t *callback_frame )
 {
     // Disable Xen callbacks, so that we don't compete for events. 
     volatile u8_t &xen_upcall_mask = 
+#ifdef CONFIG_XEN_2_0
 	xen_shared_info.vcpu_data[0].evtchn_upcall_mask;
+#else
+	xen_shared_info.vcpu_info[0].evtchn_upcall_mask;
+#endif
     bool was_upcall_masked = bit_test_and_set_atomic( 0, xen_upcall_mask );
  
     frame = callback_frame;

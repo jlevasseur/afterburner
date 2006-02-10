@@ -66,10 +66,12 @@ void dump_xen_start_info( void )
 	con << "This is a privileged domain.\n";
     if( si->is_init_dom() )
 	con << "This is the initial domain.\n";
+#if defined(CONFIG_XEN_2_0)
     if( si->is_blk_backend_dom() )
 	con << "This is the block backend domain.\n";
     if( si->is_net_backend_dom() )
 	con << "This is the net backend domain.\n";
+#endif
     con << "Command line: " << (char *)si->cmd_line << '\n';
 
     if( !debug_start_info )
@@ -94,9 +96,9 @@ void dump_xen_shared_info( void )
 #ifdef CONFIG_XEN_2_0
     con << "M2P table start: " 
 	<< (void *)word_t(xen_shared_info.arch.mfn_to_pfn_start) << '\n';
-#endif
     con << "P2M table start: " 
 	<< (void *)word_t(xen_shared_info.arch.pfn_to_mfn_frame_list) << '\n';
+#endif
 }
 
 static void map_shared_info( word_t ma )

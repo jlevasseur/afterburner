@@ -545,28 +545,15 @@ time_t backend_get_unix_seconds()
     } while( time_version != time_info->time_version2 );
 
     tsc = get_cycles();
-    unix_seconds += (tsc - last_tsc) / xen_shared_info.get_cpu_freq();
+    unix_seconds += (tsc - last_tsc) / get_vcpu().cpu_hz;
 
     return unix_seconds;
 }
 #else
 time_t backend_get_unix_seconds()
 {
-    u32_t time_version;
-    cycles_t last_tsc, tsc;
-    u64_t system_time;
-    volatile xen_time_info_t *time_info = xen_shared_info.get_time_info();
-
-    do {
-	time_version = time_info->time_version1;
-	last_tsc = time_info->tsc_timestamp;
-	system_time = time_info->system_time;
-    } while( time_version != time_info->time_version2 );
-
-    tsc = get_cycles();
-    system_time = system_time + ((tsc - last_tsc) << time_info->tsc_shift) * time_info->tsc_to_system_mul;
-
-    return xen_shared_info.wc_sec + system_time / 1000000000;
+    return xen_shared_info.wc_sec + 
+	xen_shared_info.get_current_time() / get_vcpu().cpu_hz;
 }
 #endif
 

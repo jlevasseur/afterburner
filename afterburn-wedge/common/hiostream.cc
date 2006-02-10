@@ -1,8 +1,8 @@
 /*********************************************************************
  *                
- * Copyright (C) 2005,  University of Karlsruhe
+ * Copyright (C) 2005-2006,  University of Karlsruhe
  *                
- * File path:     afterburn-wedge/common/hiostream.cc
+ * File path:     hiostream.cc
  * Description:   Implementations for the console iostream.
  *                
  * Redistribution and use in source and binary forms, with or without
@@ -26,22 +26,28 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *                
- * $Id: hiostream.cc,v 1.4 2005/04/13 11:09:53 joshua Exp $
+ * $Id: hiostream.cc,v 1.5 2006-02-10 14:19:11 stoess Exp $
  *                
  ********************************************************************/
 
 #include <hiostream.h>
 
-void hiostream_ansi_t::print_color_escape( io_color_e out_color, char base )
+char color_escape[7] = "\e[37m";
+
+void hiostream_driver_t::print_color_escape( io_color_e out_color, char base )
 {
-    this->print_char( 27 );
-    this->print_char( '[' );
-    this->print_char( base );
-    this->print_char( out_color + '0' );
-    this->print_char( 'm' );
+    color_escape[2] = base ;
+    color_escape[3] = out_color + '0';
+    this->print_char(color_escape[0]); 
+    this->print_char(color_escape[1]); 
+    this->print_char(color_escape[2]); 
+    this->print_char(color_escape[3]); 
+    this->print_char(color_escape[4]); 
+    this->print_char(color_escape[5]); 
+    this->print_char(color_escape[6]); 
 }
 
-void hiostream_ansi_t::print_attribute( char attr )
+void hiostream_driver_t::print_attribute( char attr )
 {
     this->print_char( 27 );
     this->print_char( '[' );

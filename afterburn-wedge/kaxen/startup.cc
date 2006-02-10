@@ -92,7 +92,7 @@ char xen_hypervisor_config_string[] SECTION("__xen_guest") =
 #if defined(CONFIG_XEN_2_0)
   ",XEN_VER=2.0"
 #elif defined(CONFIG_XEN_3_0)
-  ",XEN_VER=3.0"
+  ",XEN_VER=xen-3.0"
 #else
 # error better fix that bootloader insanity
 #endif

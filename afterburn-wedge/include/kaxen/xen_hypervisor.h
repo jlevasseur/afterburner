@@ -49,7 +49,11 @@ typedef u64_t u64, uint64_t;
 #include <event_channel.h>
 #include <dom0_ops.h>
 #include <physdev.h>
+#ifdef CONFIG_XEN_2_0
 #include <io/domain_controller.h>
+#else
+#include <sched.h>
+#endif
 
 // Afterburn includes.
 #include INC_ARCH(page.h)
@@ -71,15 +75,20 @@ public:
     u64_t get_cpu_freq(unsigned cpu = 0) { return cpu_freq; }
     unsigned get_num_cpus() { return 1; }
     volatile xen_time_info_t * get_time_info(unsigned cpu = 0) { return this; }
+    bool upcall_pending() {
+	return *(volatile u8 *)&vcpu_data[0].evtchn_upcall_pending;
+    }
     u64_t get_current_time() {
 	volatile xen_time_info_t *time_info = get_time_info();
+	cycles_t time_update_cycles;
 	u32_t time_version;
 	u64_t time;
 	do {
 	    time_version = time_info->time_version1;
 	    time = time_info->system_time; /* nanosecs since boot */
+	    time_update_cycles = time_info->tsc_timestamp;
 	} while( time_version != time_info->time_version2 );
-	return time;
+	return time + (get_cycles() - time_update_cycles) / (get_vcpu().cpu_hz / 1000000);
     }
 };
 
@@ -91,12 +100,21 @@ class xen_shared_info_t : public shared_info_t
 {
 public:
     u64_t get_cpu_freq(unsigned cpu = 0) {
-	return ((1000000ULL << 32) / vcpu_time[cpu].tsc_to_system_mul * 1000) <<
-	    -vcpu_time[cpu].tsc_shift;
+	u64_t freq = (1000000000ULL << 32) / vcpu_info[cpu].time.tsc_to_system_mul;
+	if( vcpu_info[cpu].time.tsc_shift < 0 )
+	    return freq << -vcpu_info[cpu].time.tsc_shift;
+	else
+	    return freq >> vcpu_info[cpu].time.tsc_shift;
     }
-    unsigned get_num_cpus() { return n_vcpu; }
+    unsigned get_num_cpus() { return MAX_VIRT_CPUS; }
     volatile xen_time_info_t * get_time_info(unsigned cpu = 0) {
-	return &vcpu_time[cpu];
+	return &vcpu_info[cpu].time;
+    }
+    bool upcall_pending() {
+	return *(volatile uint8_t *)&(vcpu_info[0].evtchn_upcall_pending);
+    }
+    volatile vcpu_info_t * get_vcpu_info(unsigned cpu = 0) {
+	return &vcpu_info[cpu];
     }
     
     volatile u64_t get_current_time() {
@@ -104,11 +122,12 @@ public:
 	u32_t time_version;
 	volatile xen_time_info_t *time_info = get_time_info();
 	do {
-	    time_version = time_info->time_version1;
+	    time_version = time_info->version;
 	    time = time_info->system_time; /* nanosecs since boot */
 	    tsc = time_info->tsc_timestamp;
-	} while( time_version != time_info->time_version2 );
-	return time + ((get_cycles() - tsc) * 1000000000ULL / time_info->tsc_to_system_mul);
+	} while( (time_version & 1) | (time_info->version ^ time_version) );
+	return time + ((get_cycles() - tsc) << time_info->tsc_shift) * time_info->tsc_to_system_mul;
+//	return time + ((get_cycles() - tsc) * 1000000000ULL / time_info->tsc_to_system_mul);
 //	return time + ( ((get_cycles() - tsc) >> -time_info->tsc_shift) *
 //			time_info->tsc_to_system_mul );
     }
@@ -125,8 +144,10 @@ class xen_start_info_t : public start_info_t
 public:
     bool is_privileged_dom()  { return flags & SIF_PRIVILEGED; }
     bool is_init_dom()        { return flags & SIF_INITDOMAIN; }
+#ifdef CONFIG_XEN_2_0
     bool is_blk_backend_dom() { return flags & SIF_BLK_BE_DOMAIN; }
     bool is_net_backend_dom() { return flags & SIF_NET_BE_DOMAIN; }
+#endif
 };
 extern xen_start_info_t xen_start_info;
 
@@ -166,12 +187,21 @@ INLINE long XEN_shutdown( word_t reason )
     INC_BURN_COUNTER(XEN_sched_op);
     ON_BURN_COUNTER(cycles_t cycles = get_cycles());
     long ret;
+#ifdef CONFIG_XEN_2_0
     word_t r1;
     __asm__ __volatile__ ( TRAP_INSTR
 	    : "=a" (ret), "=b" (r1)
 	    : "0" (__HYPERVISOR_sched_op), "1" (SCHEDOP_shutdown | (reason << SCHEDOP_reasonshift))
 	    : "memory"
 	    );
+#else
+    word_t r1, r2;
+    __asm__ __volatile__ ( TRAP_INSTR
+	    : "=a" (ret), "=b" (r1), "=c" (r2)
+	    : "0" (__HYPERVISOR_sched_op), "1" (SCHEDOP_shutdown), "2" (reason)
+	    : "memory"
+	    );
+#endif
     ADD_PERF_COUNTER(XEN_sched_op_cycles, get_cycles() - cycles);
     return ret;
 }
@@ -451,7 +481,7 @@ INLINE long XEN_xen_version( void )
 
 INLINE void xen_do_callbacks()
 { 
-    if( xen_shared_info.vcpu_data[0].evtchn_upcall_pending ) {
+    if( xen_shared_info.upcall_pending() ) {
 	INC_BURN_COUNTER(xen_upcall_pending);
 	XEN_xen_version();
     }

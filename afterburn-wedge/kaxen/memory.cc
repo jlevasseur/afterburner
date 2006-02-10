@@ -172,7 +172,7 @@ bool xen_mmop_queue_t::add_ext( word_t type, word_t ptr, bool sync )
     }
 
     ext_req[ext_count].cmd = type;
-    ext_req[ext_count].mfn = ptr;
+    ext_req[ext_count].arg1.mfn = ptr;
     ext_count++;
     multicall[mc_count - 1].args[1]++;
 

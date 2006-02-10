@@ -112,7 +112,7 @@ VERSION_linux-2.4 = 2.4.31
 VERSION_binutils = 2.15.91.0.2
 VERSION_xen-2 = 2.0.2
 #VERSION_xen-2 = 2.0.7
-VERSION_xen-3 = 3.0.0
+VERSION_xen-3 = 3.0.1
 VERSION_newlib = 1.13.0
 VERSION_idl4 = 1.0.2
 VERSION_qemu = 0.7.0
@@ -147,7 +147,6 @@ TARBALL_linux-2.6-vmi = linux-$(VERSION_linux-2.6-vmi).tar.bz2
 URL_linux-2.6-vmi = http://www.kernel.org/pub/linux/kernel/v2.6/$(TARBALL_linux-2.6-vmi)
 URL_$(TARBALL_linux-2.6-vmi) = $(URL_linux-2.6-vmi)
 UNPACK_linux-2.6-vmi = linux-$(VERSION_linux-2.6-vmi)-vmi
-PREUNPACK_linux-2.6-vmi = linux-$(VERSION_linux-2.6-vmi)
 
 
 TARBALL_linux-2.4 = linux-$(VERSION_linux-2.4).tar.bz2
@@ -163,13 +162,11 @@ UNPACK_binutils = binutils-$(VERSION_binutils)
 TARBALL_xen-2 = xen-$(VERSION_xen-2)-src.tgz
 URL_xen-2 = http://www.cl.cam.ac.uk/Research/SRG/netos/xen/downloads/$(TARBALL_xen-2)
 URL_$(TARBALL_xen-2) = $(URL_xen-2)
-PREUNPACK_xen-2 = xen-2.0
 UNPACK_xen-2 = xen-$(VERSION_xen-2)
 
 TARBALL_xen-3 = xen-$(VERSION_xen-3)-src.tgz
 URL_xen-3 = http://www.cl.cam.ac.uk/Research/SRG/netos/xen/downloads/$(TARBALL_xen-3)
 URL_$(TARBALL_xen-3) = $(URL_xen-3)
-PREUNPACK_xen-3 = xen-unstable
 UNPACK_xen-3 = xen-$(VERSION_xen-3)
 
 TARBALL_gcc = gcc-$(VERSION_gcc).tar.bz2
@@ -991,6 +988,7 @@ $(INSTALL_ROOT)/bin/afterburner: $(BUILD_DIR)/asm-parser/afterburner
 $(INSTALL_ROOT)/bin/aftercc: ../asm-parser/aftercc
 	$(Q) mkdir -p $(INSTALL_ROOT)/bin
 	$(Q) cp $< $@
+	$(Q) chmod a+x $@
 
 $(BUILD_DIR)/asm-parser/afterburner: receipts/install-antlr-cxx-$(VERSION_antlr)
 	@echo Building the Afterburner assembler parser.
@@ -1033,6 +1031,7 @@ build-wedge: build-wedge-l4ka-passthru build-wedge-kaxen-passthru
 build-wedge-prereqs-l4ka: receipts/install-pistachio-user \
   receipts/install-idl4-$(VERSION_idl4) receipts/cvs-marzipan
 build-wedge-prereqs-kaxen: receipts/patch-xen-$(VERSION_xen-2)
+build-wedge-prereqs-kaxen-3: receipts/patch-xen-$(VERSION_xen-3)
 
 ifdef TOOLPREFIX
   OPTS_wedge = TOOLPREFIX=$(TOOLPREFIX)
@@ -1041,6 +1040,8 @@ endif
 build-wedge-l4ka-%: build-wedge-prereqs-l4ka $(BOOT_DIR)/afterburn-wedge-l4ka-%
 	@echo "Finished $@"
 
+build-wedge-kaxen-3-%: build-wedge-prereqs-kaxen-3 $(BOOT_DIR)/afterburn-wedge-kaxen-3-%
+	@echo "Finished $@"
 build-wedge-kaxen-%: build-wedge-prereqs-kaxen $(BOOT_DIR)/afterburn-wedge-kaxen-%
 	@echo "Finished $@"
 
