@@ -117,9 +117,9 @@ arch_bind_from_guest( elf_bind_t *guest_exports, word_t count )
 	    found = true;
 	}
 
-	if( !found )
-	    con << "Unused guest export of type " 
-		<< guest_exports[i].type << '\n';
+//	if( !found )
+//	    con << "Unused guest export of type " 
+//		<< guest_exports[i].type << '\n';
     }
 
     // Determine whether we had any unsatisfied symbols.
@@ -157,8 +157,8 @@ arch_bind_to_guest( elf_bind_t *guest_imports, word_t count )
 	    found = true;
 	}
 
-	if( !found )
-	    con << "Unused export of type " << guest_imports[i].type << '\n';
+//	if( !found )
+//	    con << "Unused export of type " << guest_imports[i].type << '\n';
     }
 
     // Determine whether we had any unsatisfied symbols.

@@ -611,47 +611,47 @@ expr
              { std::cout << ri->getText() << '(' << in->getText() << ')'; } )
     ;
 
-asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=NULL; }
-    : popf:IA32_popf	{r=popf;  pad=21;}
-    | pushf:IA32_pushf	{r=pushf; pad=5;}
-    | lgdt:IA32_lgdt	{r=lgdt;  pad=9;}
-    | sgdt:IA32_sgdt	{r=sgdt; }
-    | lidt:IA32_lidt	{r=lidt;  pad=9;}
-    | sidt:IA32_sidt	{r=sidt; }
-    | ljmp:IA32_ljmp	{r=ljmp;  pad=9;}
-    | lds:IA32_lds	{r=lds;   pad=16;}
-    | les:IA32_les	{r=les;   pad=16;}
-    | lfs:IA32_lfs	{r=lfs;   pad=16;}
-    | lgs:IA32_lgs	{r=lgs;   pad=16;}
-    | lss:IA32_lss	{r=lss;   pad=16;}
-    | clts:IA32_clts	{r=clts;  pad=14;}
-    | hlt:IA32_hlt	{r=hlt;   pad=6;}
-    | cli:IA32_cli	{r=cli;   pad=7;}
-    | sti:IA32_sti	{r=sti;   pad=23;}
-    | lldt:IA32_lldt	{r=lldt;  pad=16;}
-    | sldt:IA32_sldt	{r=sldt;  pad=6;}
-    | ltr:IA32_ltr	{r=ltr;   pad=16;}
-    | str:IA32_str	{r=str;   pad=9;}
-    | in:IA32_in	{r=in;    pad=13;}
-    | out:IA32_out	{r=out;   pad=16;}
-    | invlpg:IA32_invlpg {r=invlpg; pad=6;}
-    | iret:IA32_iret	{r=iret;  pad=4;}
-    | lret:IA32_lret	{r=lret;  pad=4;}
-    | cpuid:IA32_cpuid	{r=cpuid; pad=6;}
-    | wrmsr:IA32_wrmsr	{r=wrmsr;}
-    | rdmsr:IA32_rdmsr	{r=rdmsr;}
-    | ia32_int:IA32_int	{r=ia32_int; pad=11;}
-    | ud2:IA32_ud2	{r=ud2;}
-    | invd:IA32_invd	{r=invd;}
-    | wbinvd:IA32_wbinvd {r=wbinvd;}
-    | smsw:IA32_smsw	{r=smsw;}
-    | lmsw:IA32_lmsw	{r=lmsw;}
-    | arpl:IA32_arpl	{r=arpl;}
-    | lar:IA32_lar	{r=lar;}
-    | lsl:IA32_lsl	{r=lsl;}
-    | rsm:IA32_rsm	{r=rsm;}
-    | pop:IA32_pop	{r=pop; pad=5;}
-    | push:IA32_push	{r=push; pad=5;}
-    | mov:IA32_mov	{r=mov; pad=12;}
+asmSensitiveInstr returns [antlr::RefAST r] { pad=8; r=_t; }
+    : IA32_popf		{pad=21;}
+    | IA32_pushf	{pad=5;}
+    | IA32_lgdt		{pad=9;}
+    | IA32_sgdt
+    | IA32_lidt		{pad=9;}
+    | IA32_sidt
+    | IA32_ljmp		{pad=9;}
+    | IA32_lds		{pad=16;}
+    | IA32_les		{pad=16;}
+    | IA32_lfs		{pad=16;}
+    | IA32_lgs		{pad=16;}
+    | IA32_lss		{pad=16;}
+    | IA32_clts		{pad=14;}
+    | IA32_hlt		{pad=6;}
+    | IA32_cli		{pad=7;}
+    | IA32_sti		{pad=23;}
+    | IA32_lldt		{pad=16;}
+    | IA32_sldt		{pad=6;}
+    | IA32_ltr		{pad=16;}
+    | IA32_str		{pad=9;}
+    | IA32_in		{pad=13;}
+    | IA32_out		{pad=16;}
+    | IA32_invlpg 	{pad=6;}
+    | IA32_iret		{pad=4;}
+    | IA32_lret		{pad=4;}
+    | IA32_cpuid
+    | IA32_wrmsr
+    | IA32_rdmsr
+    | IA32_int		{pad=11;}
+    | IA32_ud2
+    | IA32_invd
+    | IA32_wbinvd
+    | IA32_smsw
+    | IA32_lmsw
+    | IA32_arpl
+    | IA32_lar
+    | IA32_lsl
+    | IA32_rsm
+    | IA32_pop		{pad=5;}
+    | IA32_push		{pad=5;}
+    | IA32_mov		{pad=12;}
     ;
 

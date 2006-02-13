@@ -101,11 +101,11 @@ void xen_memory_t::validate_boot_pdir()
 {
     pgent_t *pdir = get_boot_pdir();
     word_t *mfn_list = (word_t *)xen_start_info.mfn_list;
-    word_t i, j, found, pg_cnt, vaddr, special;
+    word_t i, j, found, pg_cnt, vaddr, alloc_start;
 
     pg_cnt = 0;  // Number of valid leaf page table entries found.
     found = 1;   // Number of page tables and directories found.
-    special = 0;
+    alloc_start = 0;
 
     for( i = 0; i < HYPERVISOR_VIRT_START/PAGEDIR_SIZE; i++ )
     {
@@ -136,29 +136,37 @@ void xen_memory_t::validate_boot_pdir()
 		continue;
 	    if( debug_boot_pdir ) {
 		dump_pgent( 1, vaddr, ptab[j], PAGE_SIZE );
-		con << "  list=" << (void*)mfn_list[pg_cnt + special] << '\n';
+		con << "  list=" << (void*)mfn_list[pg_cnt+alloc_start] << '\n';
 	    }
     
 	    if( vaddr >= (CONFIG_WEDGE_VIRT + CONFIG_WEDGE_WINDOW) ) {
-		if (mfn_list[pg_cnt + special] != (ptab[j].get_address() >> PAGE_BITS))
+		if (mfn_list[pg_cnt + alloc_start] != (ptab[j].get_address() >> PAGE_BITS))
 	    	    PANIC( "Unexpected ordering in the MFN list." );
 		pg_cnt++;
 	    }
 	    else {
+		// In Xen 3, the initial virtual address space
+		// is 4MB aligned, and thus the page tables may have PTEs
+		// before our wedge code.  The wedge uses virtual addresses
+		// in front of its code section for remapping Xen data
+		// structures such as the shared page.  Thus the page
+		// tables may not match the mfn_list, since we may have
+		// already altered these page table entries.
 		if (debug_boot_pdir) 
 		    con << "found special page at " << (void*)vaddr << '\n';
 #ifndef CONFIG_XEN_2_0
-		special++;
+		alloc_start++;
 #endif
 	    }
 	}
     }
 
     boot_mfn_list_allocated = pg_cnt;
-    boot_mfn_list_special = special;
+    boot_mfn_list_start = alloc_start;
 
     ASSERT( found == xen_start_info.nr_pt_frames );
     ASSERT( boot_mfn_list_allocated );
+    ASSERT( boot_mfn_list_allocated > boot_mfn_list_start );
 }
 
 void xen_memory_t::map_boot_pdir()
@@ -397,7 +405,7 @@ void xen_memory_t::init( word_t mach_mem_total )
     this->total_mach_mem = mach_mem_total;
     boot_pdir_start_entry = word_t(-1);
     boot_mfn_list_allocated = 0;
-    boot_mfn_list_special = 0;
+    boot_mfn_list_start = 0;
     guest_phys_size = 0;
     pdir_maddr = 0;
 
@@ -491,16 +499,22 @@ word_t xen_memory_t::allocate_boot_page()
     word_t mfn, maddr;
 
     while( 1 ) {
-	if( boot_mfn_list_allocated >= xen_start_info.nr_pages )
+	if( unallocated_pages() == 0 )
 	    PANIC( "Insufficient boot memory." );
-	else {
-	    mfn = boot_mfn_list_allocated + boot_mfn_list_special;
-	    boot_mfn_list_allocated++;
+	else if( boot_mfn_list_start > 0 ) {
+	    // Consume the pages from the start of the mfn_list.
+	    mfn = boot_mfn_list_start-1;
+	    boot_mfn_list_start--;
 	}
+	else
+	    mfn = boot_mfn_list_allocated + boot_mfn_list_start;
+    	boot_mfn_list_allocated++;
 	maddr = ((word_t *)xen_start_info.mfn_list)[mfn] << PAGE_BITS;
 	if( is_device_memory(maddr) )
 	    con << "Suspicious: our VM was allocated a page that we thought "
 		"was a device page: " << (void *)maddr << ", remaining=" << unallocated_pages() << '\n';
+	else if( mfn == xen_start_info.shared_info )
+	    con << "Ugh: Xen's shared page is in our mfn list.\n";
 	else
 	    break;
     }

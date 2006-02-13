@@ -278,10 +278,12 @@ restart:
 	INC_BURN_COUNTER(timer_overlap);
 	if( at_idle(frame) ) {
 	    INC_BURN_COUNTER(device_irq_idle);
-	    // Xen seems to send a timer event when a device interrupt
-	    // is delivered while the domain is blocked.  We cancel this
-	    // timer event.
-	    timer_fired = false;
+	    // Xen sends a timer event when waking a domain.
+	    // We don't know whether this timer event is our 10ms periodic
+	    // timer.
+	    u64_t time_ns = (get_cycles() - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
+	    if( time_ns < 10*1000*1000 )
+		timer_fired = false;
 	}
     }
     if( timer_fired ) {
@@ -330,8 +332,8 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
     idle_redirect = redirect_frame;
 
     cycles_t current_cycles = get_cycles();
-    u64_t time = (current_cycles - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
-    if( time > 10*1000*1000 ) {
+    u64_t time_ns = (current_cycles - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
+    if( time_ns > 10*1000*1000 ) {
 	// Missed timer.
 	last_timer_cycles = current_cycles;
 	get_intlogic().raise_irq( 0 );
@@ -341,17 +343,7 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
 	return;
     }
     else
-	time = (10*1000*1000 - time) + xen_shared_info.get_current_time()*1000;
-    // Timeout 10ms from start of last period.
-//    time += 10*1000*1000; /* nanosecs */
-
-#if defined(CONFIG_XEN_3_0)
-    // Xen 3.0 is failing to deliver the timeout during the block,
-    // so exit the function, but ensure that the compiler still generates
-    // the remainder of the function.
-//    if( time_version )
-//	return;
-#endif
+	time_ns = (10*1000*1000 - time_ns) + xen_shared_info.get_current_time_ns();
 
     /* Xen has a silly race condition ... if the time-out event comes between
      * XEN_set_timer_op() and XEN_block(), then we'll block indefinitely.
@@ -377,30 +369,52 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
 #if OFS_INTLOGIC_VECTOR_CLUSTER != 0
 #error "OFS_INTLOGIC_VECTOR_CLUSTER != 0"
 #endif
-    INC_BURN_COUNTER(XEN_sched_op);
+    INC_BURN_COUNTER(XEN_multicall);
     ON_BURN_COUNTER(cycles_t cycles = get_cycles());
-    u32_t *time_val_words = (u32_t *)&time;
-    word_t a, b, c, d, s;
+    u32_t *time_val_words = (u32_t *)&time_ns;
+
+    multicall_entry_t xen_multicall[2];
+    xen_multicall[0].op = __HYPERVISOR_set_timer_op;
+#ifdef CONFIG_XEN_2_0
+    xen_multicall[0].args[0] = time_val_words[1];
+    xen_multicall[0].args[1] = time_val_words[0];
+#else
+    xen_multicall[0].args[0] = time_val_words[0];
+    xen_multicall[0].args[1] = time_val_words[1];
+#endif
+    xen_multicall[1].op = __HYPERVISOR_sched_op;
+    xen_multicall[1].args[0] = SCHEDOP_block;
+    xen_multicall[1].args[1] = 0;
+
+    xen_upcall_mask = 1;
+    if( idle_redirect->is_redirect() || idle_redirect->do_redirect() ) {
+	xen_upcall_mask = 0;
+	return;
+    }
+    if( xen_upcall_pending ) {
+	xen_upcall_mask = 0;
+	XEN_xen_version();
+	return;
+    }
+
+    word_t a, b, c;
     __asm__ __volatile__ (
 	    ".global idle_race_start, idle_race_end\n"
     	    "idle_race_start:\n"	/* From here, roll forward. */
+#if 0
 	    "cmp $0, 0 + intlogic ;"	/* Pending interrupts? */
 	    "jnz idle_race_end ;"	/* Abort to handle interrupt. */
-    	    TRAP_INSTR ";"		/* Invoke XEN_set_timer_op(time) */
-	    "mov %%edx, %%eax ;"	/* Prepare for XEN_block(). */
-	    "mov %%esi, %%ebx ;"	/* Prepare for XEN_block(). */
-    	    TRAP_INSTR ";"		/* Invoke XEN_block(). */
+#endif
+    	    TRAP_INSTR ";"		/* Invoke XEN_multicall() */
     	    "idle_race_end:\n"		/* Roll forward destination. */
     	    : /* outputs */
-	    "=a" (a), "=b" (b), "=c" (c), "=d" (d), "=S" (s)
+	    "=a" (a), "=b" (b), "=c" (c)
     	    : /* inputs */
-	    "0" (__HYPERVISOR_set_timer_op),
-	    "1" (time_val_words[1]), "2" (time_val_words[0]),
-  	    "3" (__HYPERVISOR_sched_op), "4" (SCHEDOP_block)
+	    "0" (__HYPERVISOR_multicall), "1" (xen_multicall), "2" (2)
     	    : /* clobbers */
   	    "flags", "memory"
 	);
-    ADD_PERF_COUNTER(XEN_sched_op_cycles, get_cycles() - cycles);
+    ADD_PERF_COUNTER(XEN_multicall, get_cycles() - cycles);
 
     /* If we had an interrupt prior to idle_race_start, but after the
      * last check, then we need to fill out the redirect frame.

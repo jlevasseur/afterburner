@@ -59,6 +59,7 @@ typedef u64_t u64, uint64_t;
 #include INC_ARCH(page.h)
 #include INC_ARCH(cpu.h)
 #include INC_ARCH(cycles.h)
+#include INC_WEDGE(tlocal.h)
 #include <burn_counters.h>
 
 // We allocate an address for the shared info within our linker script.  
@@ -78,17 +79,16 @@ public:
     bool upcall_pending() {
 	return *(volatile u8 *)&vcpu_data[0].evtchn_upcall_pending;
     }
-    u64_t get_current_time() {
+    u64_t get_current_time_ns() {
 	volatile xen_time_info_t *time_info = get_time_info();
-	cycles_t time_update_cycles;
+	u64_t time, tsc;
 	u32_t time_version;
-	u64_t time;
 	do {
 	    time_version = time_info->time_version1;
 	    time = time_info->system_time; /* nanosecs since boot */
-	    time_update_cycles = time_info->tsc_timestamp;
+	    tsc = time_info->tsc_timestamp;
 	} while( time_version != time_info->time_version2 );
-	return time + (get_cycles() - time_update_cycles) / (get_vcpu().cpu_hz / 1000000);
+	return time + (get_cycles() - tsc) / (get_vcpu().cpu_hz / 1000000) * 1000;
     }
 };
 
@@ -117,7 +117,7 @@ public:
 	return &vcpu_info[cpu];
     }
     
-    volatile u64_t get_current_time() {
+    volatile u64_t get_current_time_ns() {
 	u64_t time, tsc;
 	u32_t time_version;
 	volatile xen_time_info_t *time_info = get_time_info();
@@ -126,10 +126,7 @@ public:
 	    time = time_info->system_time; /* nanosecs since boot */
 	    tsc = time_info->tsc_timestamp;
 	} while( (time_version & 1) | (time_info->version ^ time_version) );
-	return time + ((get_cycles() - tsc) << time_info->tsc_shift) * time_info->tsc_to_system_mul;
-//	return time + ((get_cycles() - tsc) * 1000000000ULL / time_info->tsc_to_system_mul);
-//	return time + ( ((get_cycles() - tsc) >> -time_info->tsc_shift) *
-//			time_info->tsc_to_system_mul );
+	return time + (get_cycles() - tsc) / (get_vcpu().cpu_hz / 1000000) * 1000;
     }
 };
 
@@ -349,8 +346,12 @@ INLINE long XEN_set_timer_op( u64_t time_val )
     u32_t *time_val_words = (u32_t *)&time_val;
     __asm__ __volatile__ ( TRAP_INSTR
 	    : "=a" (ret), "=b" (r1), "=c" (r2)
-	    : "0" (__HYPERVISOR_set_timer_op), "1" (time_val_words[1]),
-	      "2" (time_val_words[0])
+	    : "0" (__HYPERVISOR_set_timer_op), 
+#ifdef CONFIG_XEN_2_0
+	      "1" (time_val_words[1]), "2" (time_val_words[0])
+#else
+	      "1" (time_val_words[0]), "2" (time_val_words[1])
+#endif
 	    : "memory"
 	    );
     ADD_PERF_COUNTER(XEN_set_timer_op_cycles, get_cycles() - cycles);

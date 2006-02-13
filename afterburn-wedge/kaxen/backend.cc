@@ -552,8 +552,9 @@ time_t backend_get_unix_seconds()
 #else
 time_t backend_get_unix_seconds()
 {
+    // TODO: Is this a race-free operation?
     return xen_shared_info.wc_sec + 
-	xen_shared_info.get_current_time() / get_vcpu().cpu_hz;
+	(xen_shared_info.get_current_time_ns() / 1000000000);
 }
 #endif
 

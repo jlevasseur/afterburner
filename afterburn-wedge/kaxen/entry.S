@@ -40,6 +40,19 @@
  * It is the same as iret_user_frame_t from include/ia32/cpu.h
  */
 
+.macro xen_pagefault_fixup
+#if !defined(CONFIG_XEN_2_0)
+	/* Xen 2 provides the fault address on the stack.  Xen 3 puts it
+	 * in a frustrating location.  To retain compatibility with our
+	 * Xen 2 code, we push the fault address on the stack.
+	 */
+#if defined(CONFIG_SMP)
+#error Retarded!!
+#endif
+	pushl	xen_shared_info + 8
+#endif
+.endm
+
 .macro cpu_save_all
 	/* The order matches that of xen_callback_frame_t in 
 	 * include/kaxen/cpu.h.
@@ -102,6 +115,8 @@ entry xen_event_failsafe_wrapper
 
 #if defined(CONFIG_IA32_FAST_VECTOR)
 entry page_fault_wrapper, ".text.pte"
+	xen_pagefault_fixup
+
 #if defined(CONFIG_KAXEN_UNLINK_HEURISTICS)
 	testl	$1, (4)(%esp)		/* Error code: is it a valid pgent? */
 	jnz	1f			/* Valid pgent. */
@@ -145,7 +160,7 @@ page_fault_slow:
 #else
 
 entry page_fault_wrapper, ".text.pte"
-
+	xen_pagefault_fixup
 #endif
 	pushl	$(14 | (1 << 31))	/* Frame ID, error code enabled. */
 	cpu_save_all

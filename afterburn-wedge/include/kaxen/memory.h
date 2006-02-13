@@ -261,7 +261,7 @@ private:
     word_t pdir_end_entry;
     word_t boot_pdir_start_entry;
     word_t boot_mfn_list_allocated;
-    word_t boot_mfn_list_special;
+    word_t boot_mfn_list_start;
     word_t guest_phys_size;
     word_t total_mach_mem;
     word_t pdir_maddr;
@@ -283,7 +283,7 @@ private:
     void unmanage_page_dir( word_t pdir_vaddr );
 
     word_t unallocated_pages()
-	{ return xen_start_info.nr_pages - boot_mfn_list_allocated - boot_mfn_list_special; }
+	{ return xen_start_info.nr_pages - (boot_mfn_list_allocated - boot_mfn_list_start); }
 
     pgent_t *get_boot_pdir()
 	{ return (pgent_t *)xen_start_info.pt_base; }
