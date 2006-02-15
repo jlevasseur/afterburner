@@ -352,7 +352,9 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
      * miss the just-installed time-out, returning to an indefinite XEN_block().
      * (If XEN_block() accepted a time-out parameter, we wouldn't have this
      * problem, although Xen is preemptible and would still probably have a race
-     * condition.)
+     * condition.  Xen solves the problem by having XenoLinux disable 
+     * callbacks before calling XEN_block(), and then having 
+     * XEN_block() enable callbacks.)
      */
     /* When a timer interrupts the following code block, we want the timer
      * interrupt to roll-forward the code, to avoid the race condition.  
@@ -366,61 +368,61 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
      * must prevent us from putting the VM to sleep.  The roll-forward
      * code protects against this race condition.
      */
+#ifndef CONFIG_XEN_2_0
+    xen_upcall_mask = 1;
+    if( xen_upcall_pending ) {
+	XEN_xen_version();
+	if( !idle_redirect->is_redirect() )
+    	    idle_redirect->do_redirect();
+	return;
+    }
+#endif
+
 #if OFS_INTLOGIC_VECTOR_CLUSTER != 0
 #error "OFS_INTLOGIC_VECTOR_CLUSTER != 0"
 #endif
-    INC_BURN_COUNTER(XEN_multicall);
+    INC_BURN_COUNTER(XEN_set_timer_op);
     ON_BURN_COUNTER(cycles_t cycles = get_cycles());
     u32_t *time_val_words = (u32_t *)&time_ns;
-
-    multicall_entry_t xen_multicall[2];
-    xen_multicall[0].op = __HYPERVISOR_set_timer_op;
-#ifdef CONFIG_XEN_2_0
-    xen_multicall[0].args[0] = time_val_words[1];
-    xen_multicall[0].args[1] = time_val_words[0];
-#else
-    xen_multicall[0].args[0] = time_val_words[0];
-    xen_multicall[0].args[1] = time_val_words[1];
-#endif
-    xen_multicall[1].op = __HYPERVISOR_sched_op;
-    xen_multicall[1].args[0] = SCHEDOP_block;
-    xen_multicall[1].args[1] = 0;
-
-    xen_upcall_mask = 1;
-    if( idle_redirect->is_redirect() || idle_redirect->do_redirect() ) {
-	xen_upcall_mask = 0;
-	return;
-    }
-    if( xen_upcall_pending ) {
-	xen_upcall_mask = 0;
-	XEN_xen_version();
-	return;
-    }
 
     word_t a, b, c;
     __asm__ __volatile__ (
 	    ".global idle_race_start, idle_race_end\n"
     	    "idle_race_start:\n"	/* From here, roll forward. */
-#if 0
 	    "cmp $0, 0 + intlogic ;"	/* Pending interrupts? */
 	    "jnz idle_race_end ;"	/* Abort to handle interrupt. */
+    	    TRAP_INSTR ";"		/* Invoke XEN_set_timer_op(). */
+	    "mov %6, %%eax ;"		/* Prepare for XEN_block(). */
+	    "mov %7, %%ebx ;"		/* Prepare for XEN_block(). */
+#ifndef CONFIG_XEN_2_0
+	    "mov $0, %%ecx ;"		/* Prepare for XEN_block(). */
 #endif
-    	    TRAP_INSTR ";"		/* Invoke XEN_multicall() */
+	    TRAP_INSTR ";"		/* Invoke XEN_block(). */
     	    "idle_race_end:\n"		/* Roll forward destination. */
     	    : /* outputs */
 	    "=a" (a), "=b" (b), "=c" (c)
     	    : /* inputs */
-	    "0" (__HYPERVISOR_multicall), "1" (xen_multicall), "2" (2)
+	    "0" (__HYPERVISOR_set_timer_op),
+#ifdef CONFIG_XEN_2_0
+	    "1" (time_val_words[1]), "2" (time_val_words[0]),
+#else
+	    "1" (time_val_words[0]), "2" (time_val_words[1]),
+#endif
+	    "i" (__HYPERVISOR_sched_op), "i" (SCHEDOP_block)
     	    : /* clobbers */
   	    "flags", "memory"
 	);
-    ADD_PERF_COUNTER(XEN_multicall, get_cycles() - cycles);
+    ADD_PERF_COUNTER(XEN_set_timer_op, get_cycles() - cycles);
 
     /* If we had an interrupt prior to idle_race_start, but after the
      * last check, then we need to fill out the redirect frame.
      */
     if( !idle_redirect->is_redirect() )
 	idle_redirect->do_redirect();
+
+#ifndef CONFIG_XEN_2_0
+    xen_upcall_mask = 0;
+#endif
 }
 
 bool backend_enable_device_interrupt( u32_t interrupt )

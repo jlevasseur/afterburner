@@ -55,7 +55,7 @@ module_sets = $(VERSION_linux-2.6)-afterburn-$(SUT) \
   $(VERSION_linux-2.6)-afterburn-$(SUT)-native \
   $(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-$(SUT) \
   2.6.8.1-L4Ka-$(SUT) $(VERSION_linux-2.6-vmi)-vmi-$(SUT) \
-  $(VERSION_linux-2.6-vmi)-vmi-$(SUT)-native
+  $(VERSION_linux-2.6-vmi)-vmi-$(SUT)-native 2.6.12.6-xen0-3.0.1-$(SUT)
 
 .PHONY: install-remote-modules
 install-remote-modules:
@@ -74,9 +74,11 @@ install-remote-benchmarks: benchmarks = $(INSTALL_ROOT)/bin/netperf \
 install-remote-benchmarks:
 	@echo "Installing benchmarks on $(SUT)"
 	-$(Q) ssh $(SUT) "killall netserver"
+	$(Q) ssh $(SUT) "mkdir -p bench"
 	$(Q) scp -B -p $(benchmarks) $(SUT):bench/.
 	@echo "Installing benchmarks on $(CLIENT)"
 	-$(Q) ssh $(CLIENT) "killall netserver"
+	$(Q) ssh $(CLIENT) "mkdir -p bench"
 	$(Q) scp -B -p $(benchmarks) $(CLIENT):bench/.
 
 

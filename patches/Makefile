@@ -106,6 +106,7 @@ endif
 ######################################################################
 VERSION_linux-2.6 = 2.6.9
 #VERSION_linux-2.6 = 2.6.12.3
+VERSION_linux-2.6 = 2.6.12.6
 VERSION_linux-2.6-vmi = 2.6.12.3
 VERSION_linux-2.4 = 2.4.31
 #VERSION_linux-2.4 = 2.4.28
@@ -1076,6 +1077,12 @@ OPTS_wedge-kaxen-passthru-perf = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   OPTIMIZE=y KAXEN_INT_FP=y \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public \
   XEN_2_0
+
+OPTS_wedge-kaxen-3-passthru-perf = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
+  OPTIMIZE=y KAXEN_INT_FP=y \
+  KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-3)/xen/include/public \
+  XEN_3_0
+
 
 
 OPTS_wedge-l4ka-guest = WEDGE_L4KA SMP=n DEVICE_PASSTHRU=n DEVICE_DP83820=y \

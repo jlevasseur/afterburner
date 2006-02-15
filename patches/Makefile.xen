@@ -24,10 +24,22 @@ build-linux-2.6-xen0-3-i30pc30: type=i30pc30
 build-linux-2.6-xen0-3-i30pc30: \
   $(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-i30pc30 \
   $(INSTALL_ROOT)/lib/modules/$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-i30pc30/extra/uka_perfmon.ko
-
+	echo "Finished $@"
 
 BUILD_linux-2.6-xen0 = $(BUILD_DIR)/$(UNPACK_linux-2.6)-xen0-$(VERSION_xen-2)
 BUILD_linux-2.6-xen0-3 = $(BUILD_DIR)/$(UNPACK_linux-2.6)-xen0-$(VERSION_xen-3)
+
+##
+##  Install the vmlinuz file into the boot directory.
+##
+$(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%: $(BUILD_linux-2.6-xen0)-%/vmlinuz
+	$(Q) mkdir -p $(BOOT_DIR)
+	$(Q) cp $< $@
+
+$(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-%: $(BUILD_linux-2.6-xen0-3)-%/vmlinuz
+	$(Q) mkdir -p $(BOOT_DIR)
+	$(Q) cp $< $@
+
 
 OPT_xen_pristine-2.0.2 = pristine-$(UNPACK_linux-2.6)
 OPT_xen_pristine-2.0.7 = pristine-$(UNPACK_linux-2.6)/.valid-pristine
@@ -52,11 +64,11 @@ receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%: \
 receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-%: \
   $(ARCHIVE_DIR)/$(TARBALL_linux-2.6)
 	@echo "Creating Linux build directory with patches for Xen $(VERSION_xen-3)"
-	$(Q) if [ -d $(BUILD_linux-2.6-xen0-3)-$(type) ] ; then echo "$(BUILD_linux-2.6-xen0-3)-$(type) already exists!" && exit 1 ; fi
+	$(Q) if [ -d $(BUILD_linux-2.6-xen0-3)-$* ] ; then echo "$(BUILD_linux-2.6-xen0-3)-$* already exists!" && exit 1 ; fi
 	$(Q) mkdir -p $(BUILD_DIR)
 	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-3) && make LINUX_SRC_PATH=$(ARCHIVE_DIR) pristine-$(UNPACK_linux-2.6))
-	$(Q) mv $(SRCDIR)/$(UNPACK_xen-3)/pristine-$(UNPACK_linux-2.6) $(BUILD_linux-2.6-xen0-3)-$(type)
-	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-3)/linux-2.6-xen-sparse && ./mkbuildtree $(BUILD_linux-2.6-xen0-3)-$(type))
+	$(Q) mv $(SRCDIR)/$(UNPACK_xen-3)/pristine-$(UNPACK_linux-2.6) $(BUILD_linux-2.6-xen0-3)-$*
+	$(Q) (cd $(SRCDIR)/$(UNPACK_xen-3)/linux-2.6-xen-sparse && ./mkbuildtree $(BUILD_linux-2.6-xen0-3)-$*)
 	$(Q) touch $@
 
 
@@ -68,8 +80,10 @@ $(BUILD_linux-2.6-xen0)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$
 	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-xen0-$(VERSION_xen-2)-$(type)"/g ; }' > $@
 
 .PRECIOUS: $(BUILD_linux-2.6-xen0-3)-%/.config
-$(BUILD_linux-2.6-xen0-3)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6)-xen0-3-%
-	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-xen0-$(VERSION_xen-3)-$(type)"/g ; }' > $@
+$(BUILD_linux-2.6-xen0-3)-%/.config: \
+  ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6)-xen0-3-% \
+  receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-% 
+	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-xen0-$(VERSION_xen-3)-$*"/g ; }' > $@
 
 
 ##
@@ -85,23 +99,11 @@ $(BUILD_linux-2.6-xen0)-%/vmlinuz: \
 
 .PRECIOUS: $(BUILD_linux-2.6-xen0-3)-%/vmlinuz
 $(BUILD_linux-2.6-xen0-3)-%/vmlinuz: \
-  receipts/stitch-linux-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-% \
   $(BUILD_linux-2.6-xen0-3)-%/.config
-	@echo "Building Linux in $(BUILD_linux-2.6-xen0-3)-$(type)"
-	$(Q) (cd $(BUILD_linux-2.6-xen0-3)-$(type) && make ARCH=xen)
-	$(Q) if grep CONFIG_MODULES=y $(BUILD_linux-2.6-xen0-3)-$(type)/.config ; then cd $(BUILD_linux-2.6-xen0-3)-$(type) && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) modules_install ; fi
+	@echo "Building Linux in $(BUILD_linux-2.6-xen0-3)-$*"
+	$(Q) (cd $(BUILD_linux-2.6-xen0-3)-$* && make ARCH=xen)
+	$(Q) if grep CONFIG_MODULES=y $(BUILD_linux-2.6-xen0-3)-$*/.config ; then cd $(BUILD_linux-2.6-xen0-3)-$* && make ARCH=xen INSTALL_MOD_PATH=$(INSTALL_ROOT) modules_install ; fi
 
-
-##
-##  Install the vmlinuz file into the boot directory.
-##
-$(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-2)-%: $(BUILD_linux-2.6-xen0)-%/vmlinuz
-	$(Q) mkdir -p $(BOOT_DIR)
-	$(Q) cp $< $@
-
-$(BOOT_DIR)/vmlinuz-$(VERSION_linux-2.6)-xen0-$(VERSION_xen-3)-%: $(BUILD_linux-2.6-xen0-3)-%/vmlinuz
-	$(Q) mkdir -p $(BOOT_DIR)
-	$(Q) cp $< $@
 
 
 ##
