@@ -73,13 +73,17 @@ typedef shared_info_t xen_time_info_t;
 class xen_shared_info_t : public shared_info_t
 {
 public:
-    u64_t get_cpu_freq(unsigned cpu = 0) { return cpu_freq; }
-    unsigned get_num_cpus() { return 1; }
-    volatile xen_time_info_t * get_time_info(unsigned cpu = 0) { return this; }
-    bool upcall_pending() {
-	return *(volatile u8 *)&vcpu_data[0].evtchn_upcall_pending;
-    }
-    u64_t get_current_time_ns() {
+    u64_t get_cpu_freq(unsigned cpu = 0)
+	{ return cpu_freq; }
+    unsigned get_num_cpus()
+	{ return 1; }
+    volatile xen_time_info_t * get_time_info(unsigned cpu = 0)
+	{ return this; }
+    bool upcall_pending()
+	{ return *(volatile u8 *)&vcpu_data[0].evtchn_upcall_pending; }
+
+    u64_t get_current_time_ns( u64_t current_cycles=get_cycles() )
+    {
 	volatile xen_time_info_t *time_info = get_time_info();
 	u64_t time, tsc;
 	u32_t time_version;
@@ -88,36 +92,42 @@ public:
 	    time = time_info->system_time; /* nanosecs since boot */
 	    tsc = time_info->tsc_timestamp;
 	} while( time_version != time_info->time_version2 );
-	return time + (get_cycles() - tsc) / (get_vcpu().cpu_hz / 1000000) * 1000;
+	return time + (current_cycles - tsc) / (get_cpu_freq()/1000000)*1000;
     }
 };
 
 #else	/* Xen 3.0 */
 
 typedef vcpu_time_info xen_time_info_t;
+typedef shared_info_t xen_wc_info_t;
 
 class xen_shared_info_t : public shared_info_t
 {
 public:
-    u64_t get_cpu_freq(unsigned cpu = 0) {
-	u64_t freq = (1000000000ULL << 32) / vcpu_info[cpu].time.tsc_to_system_mul;
+    volatile xen_time_info_t * get_time_info(unsigned cpu = 0)
+	{ return &vcpu_info[cpu].time; }
+    volatile xen_wc_info_t * get_wc_info()
+	{ return this; }
+    volatile vcpu_info_t & get_vcpu_info(unsigned cpu = 0)
+	{ return vcpu_info[cpu]; }
+
+    u64_t get_cpu_freq(unsigned cpu = 0)
+    {
+	u64_t freq = 
+	    (1000000000ULL << 32) / vcpu_info[cpu].time.tsc_to_system_mul;
 	if( vcpu_info[cpu].time.tsc_shift < 0 )
 	    return freq << -vcpu_info[cpu].time.tsc_shift;
 	else
 	    return freq >> vcpu_info[cpu].time.tsc_shift;
     }
-    unsigned get_num_cpus() { return MAX_VIRT_CPUS; }
-    volatile xen_time_info_t * get_time_info(unsigned cpu = 0) {
-	return &vcpu_info[cpu].time;
-    }
-    bool upcall_pending() {
-	return *(volatile uint8_t *)&(vcpu_info[0].evtchn_upcall_pending);
-    }
-    volatile vcpu_info_t * get_vcpu_info(unsigned cpu = 0) {
-	return &vcpu_info[cpu];
-    }
+
+    unsigned get_num_cpus()
+	{ return MAX_VIRT_CPUS; }
+    bool upcall_pending(unsigned cpu = 0)
+	{ return get_vcpu_info(cpu).evtchn_upcall_pending; }
     
-    volatile u64_t get_current_time_ns() {
+    volatile u64_t get_current_time_ns( u64_t current_cycles = get_cycles() )
+    {
 	u64_t time, tsc;
 	u32_t time_version;
 	volatile xen_time_info_t *time_info = get_time_info();
@@ -126,7 +136,7 @@ public:
 	    time = time_info->system_time; /* nanosecs since boot */
 	    tsc = time_info->tsc_timestamp;
 	} while( (time_version & 1) | (time_info->version ^ time_version) );
-	return time + (get_cycles() - tsc) / (get_vcpu().cpu_hz / 1000000) * 1000;
+	return time + (current_cycles - tsc) / (get_vcpu().cpu_hz/1000000)*1000;
     }
 };
 
@@ -480,12 +490,14 @@ INLINE long XEN_xen_version( void )
     return ret;
 }
 
-INLINE void xen_do_callbacks()
+INLINE bool xen_do_callbacks()
 { 
     if( xen_shared_info.upcall_pending() ) {
 	INC_BURN_COUNTER(xen_upcall_pending);
 	XEN_xen_version();
+	return true;
     }
+    return false;
 }
 
 #endif	/* __AFTERBURN_WEDGE__INCLUDE__KAXEN__XEN_HYPERVISOR_H__ */

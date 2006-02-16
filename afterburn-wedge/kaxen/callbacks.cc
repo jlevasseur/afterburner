@@ -111,6 +111,7 @@ static word_t channel_timer = 0;
 static word_t channel_console = channel_nil;
 static word_t channel_controller = channel_nil;
 
+static cycles_t cycles_10ms = 0;
 static cycles_t last_timer_cycles = 0;
 
 void init_xen_callbacks()
@@ -122,6 +123,10 @@ void init_xen_callbacks()
     if( XEN_set_callbacks(cs, (word_t)xen_event_callback_wrapper,
 	    cs, (word_t)xen_event_failsafe_wrapper) )
 	PANIC( "Failed to initialize the Xen callbacks." );
+
+    // How many cycles executed by this CPU in 10ms?
+    cycles_10ms = get_vcpu().cpu_hz;
+    cycles_10ms = 10*cycles_10ms / 1000;
 
     // Attach to the timer VIRQ.
     evtchn_op_t op;
@@ -281,8 +286,8 @@ restart:
 	    // Xen sends a timer event when waking a domain.
 	    // We don't know whether this timer event is our 10ms periodic
 	    // timer.
-	    u64_t time_ns = (get_cycles() - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
-	    if( time_ns < 10*1000*1000 )
+	    cycles_t delta = get_cycles() - last_timer_cycles;
+	    if( delta < cycles_10ms )
 		timer_fired = false;
 	}
     }
@@ -332,8 +337,7 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
     idle_redirect = redirect_frame;
 
     cycles_t current_cycles = get_cycles();
-    u64_t time_ns = (current_cycles - last_timer_cycles) / (get_vcpu().cpu_hz / 1000000) * 1000;
-    if( time_ns > 10*1000*1000 ) {
+    if( (current_cycles - last_timer_cycles) > cycles_10ms ) {
 	// Missed timer.
 	last_timer_cycles = current_cycles;
 	get_intlogic().raise_irq( 0 );
@@ -342,8 +346,9 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
 	    redirect_frame->do_redirect();
 	return;
     }
-    else
-	time_ns = (10*1000*1000 - time_ns) + xen_shared_info.get_current_time_ns();
+
+    u64_t time_ns = xen_shared_info.get_current_time_ns( 
+	    current_cycles + cycles_10ms );
 
     /* Xen has a silly race condition ... if the time-out event comes between
      * XEN_set_timer_op() and XEN_block(), then we'll block indefinitely.
@@ -354,7 +359,8 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
      * problem, although Xen is preemptible and would still probably have a race
      * condition.  Xen solves the problem by having XenoLinux disable 
      * callbacks before calling XEN_block(), and then having 
-     * XEN_block() enable callbacks.)
+     * XEN_block() enable callbacks.  I don't want to disable callbacks;
+     * it is unnecessary.)
      */
     /* When a timer interrupts the following code block, we want the timer
      * interrupt to roll-forward the code, to avoid the race condition.  
@@ -369,11 +375,15 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
      * code protects against this race condition.
      */
 #ifndef CONFIG_XEN_2_0
+    // Seems that Xen 3 requires that we enter XEN_block() without pending
+    // callbacks (or perhaps without a pending timer callback).  Ugh.
     xen_upcall_mask = 1;
-    if( xen_upcall_pending ) {
-	XEN_xen_version();
+    if( xen_do_callbacks() ) {
 	if( !idle_redirect->is_redirect() )
     	    idle_redirect->do_redirect();
+    }
+    if( idle_redirect->is_redirect() ) {
+	xen_upcall_mask = 0;
 	return;
     }
 #endif
@@ -419,10 +429,6 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
      */
     if( !idle_redirect->is_redirect() )
 	idle_redirect->do_redirect();
-
-#ifndef CONFIG_XEN_2_0
-    xen_upcall_mask = 0;
-#endif
 }
 
 bool backend_enable_device_interrupt( u32_t interrupt )

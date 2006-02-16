@@ -552,9 +552,15 @@ time_t backend_get_unix_seconds()
 #else
 time_t backend_get_unix_seconds()
 {
-    // TODO: Is this a race-free operation?
-    return xen_shared_info.wc_sec + 
-	(xen_shared_info.get_current_time_ns() / 1000000000);
+    volatile xen_wc_info_t *wc_info = xen_shared_info.get_wc_info();
+    u32_t wc_version;
+    u32_t wc_sec;
+    do {
+	wc_version = wc_info->wc_version;
+	wc_sec = wc_info->wc_sec;
+    } while( (wc_version & 1) | (wc_info->wc_version ^ wc_version) );
+
+    return wc_sec + (xen_shared_info.get_current_time_ns() / 1000000000);
 }
 #endif
 

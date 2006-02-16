@@ -51,6 +51,7 @@ struct vcpu_t
     word_t guest_vaddr_offset;	// 100
     word_t xen_esp0;		// 104
 
+    // TODO: use 64-bit type for cpu_hz
     word_t cpu_hz;
     word_t cpu_id;
 
