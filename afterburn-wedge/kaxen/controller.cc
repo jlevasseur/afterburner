@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: controller.cc,v 1.4 2005/11/09 14:41:16 joshua Exp $
- *
  ********************************************************************/
 
 #include INC_WEDGE(xen_hypervisor.h)

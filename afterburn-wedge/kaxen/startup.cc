@@ -27,8 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: startup.cc,v 1.5 2005/12/16 15:56:49 joshua Exp $
- *
  ********************************************************************/
 
 #include INC_ARCH(types.h)

@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: controller.h,v 1.3 2005/11/09 01:39:32 uhlig Exp $
- *
  ********************************************************************/
 #ifndef __AFTERBURN_WEDGE__INCLUDE__KAXEN__CONTROLLER_H__
 #define __AFTERBURN_WEDGE__INCLUDE__KAXEN__CONTROLLER_H__

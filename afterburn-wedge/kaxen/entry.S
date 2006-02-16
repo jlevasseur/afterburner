@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: entry.S,v 1.24 2006/01/03 14:15:34 joshua Exp $
- *
  ********************************************************************/
 
 #include INC_ARCH(frontend.S)

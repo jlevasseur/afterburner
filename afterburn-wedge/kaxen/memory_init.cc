@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: memory_init.cc,v 1.33 2006-01-11 19:00:07 stoess Exp $
- *
  ********************************************************************/
 
 #include INC_ARCH(page.h)
@@ -189,15 +187,6 @@ void xen_memory_t::map_boot_pdir()
     if( !mmop_queue.ptab_update( get_pdent_maddr(word_t(pgtab_region)), 
 				 pgent.get_raw(), true ) )
 	PANIC( "Unable to recursively map the boot page directory." );
-
-    // Map the page directory at pdir_region.  
-    int err = XEN_update_va_mapping( word_t(pdir_region),
-	    pgent.get_raw(), UVMF_INVLPG );
-    if( err )
-	PANIC( "Unable to remap the boot page directory." );
-
-    ASSERT( pgent.get_raw() == get_pgent(pdir_vaddr).get_raw() );
-    ASSERT( pgent.get_raw() == get_pgent(word_t(pdir_region)).get_raw() );
 }
 
 void xen_memory_t::globalize_wedge()
@@ -683,11 +672,6 @@ void xen_memory_t::enable_guest_paging( word_t pdir_phys )
     new_pdir[ pgent_t::get_pdir_idx(word_t(pgtab_region)) ].set_address(new_pdir_maddr);
 
     this->pdir_maddr = new_pdir_maddr;
-    pgent_t pdir_region_pgent;
-    pdir_region_pgent.clear(); pdir_region_pgent.set_valid(); 
-    pdir_region_pgent.set_kernel(); pdir_region_pgent.set_read_only(); 
-    ON_KAXEN_GLOBAL_PAGES( pdir_region_pgent.set_global() );
-    pdir_region_pgent.set_address( new_pdir_maddr );
 
     // Make the new page directory read-only in the current address space,
     // to satisfy Xen's reference counting.
@@ -697,8 +681,6 @@ void xen_memory_t::enable_guest_paging( word_t pdir_phys )
     good &= mmop_queue.ptab_update( pdir_phys_maddr, pdir_phys_pgent.x.raw );
     good &= mmop_queue.pin_table( new_pdir_maddr, 1 );
     good &= mmop_queue.set_baseptr( new_pdir_maddr );
-    good &= mmop_queue.ptab_update( get_pgent_maddr(word_t(pdir_region)), 
-				    pdir_region_pgent.get_raw() );
     good &= mmop_queue.commit();
     if( !good )
     {

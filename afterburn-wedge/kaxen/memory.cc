@@ -658,22 +658,6 @@ void xen_memory_t::switch_page_dir( word_t new_pdir_phys, word_t old_pdir_phys )
     if( !mpage.is_pinned() )
 	manage_page_dir( new_pdir_phys );
 
-    // Init the mapping for the page directory at pdir_region.  We must
-    // do this every pdir switch, since it is potentially on a shared
-    // page table.
-    if( this->pdir_maddr != mpage.get_address() )
-    {
-	pgent_t pdir_region_pgent;
-	pdir_region_pgent.clear(); pdir_region_pgent.set_valid(); 
-	pdir_region_pgent.set_kernel(); pdir_region_pgent.set_read_only(); 
-	ON_KAXEN_GLOBAL_PAGES( pdir_region_pgent.set_global() );
-	pdir_region_pgent.set_address( mpage.get_address() );
-	good &= mmop_queue.ptab_update( get_pgent_maddr(word_t(pdir_region)),
-					pdir_region_pgent.get_raw() );
-    	ON_KAXEN_GLOBAL_PAGES( good &= mmop_queue.invlpg(word_t(pdir_region)) );
-    }
-
-
     // Switch the page directory.
     this->pdir_maddr = mpage.get_address();
     good &= mmop_queue.set_baseptr( mpage.get_address(), false );

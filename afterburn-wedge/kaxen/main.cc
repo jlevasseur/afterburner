@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: main.cc,v 1.22 2006-01-11 18:34:34 stoess Exp $
- *
  ********************************************************************/
 
 #include INC_ARCH(cpu.h)

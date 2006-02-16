@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: debug.cc,v 1.20 2005/12/16 15:48:36 joshua Exp $
- *
  ********************************************************************/
 
 #include INC_ARCH(cpu.h)

@@ -26,18 +26,19 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *                
- * $Id: linker.lds,v 1.9 2005/11/12 11:38:18 joshua Exp $
- *                
  ********************************************************************/
 
 ENTRY(kaxen_wedge_start)
 
+#include INC_ARCH(page.h)
+
 pgtab_region = CONFIG_WEDGE_VIRT;
 xen_p2m_region = pgtab_region + CONFIG_WEDGE_PGTAB_REGION;
 tmp_region = xen_p2m_region + CONFIG_WEDGE_P2M_REGION;
-pdir_region = tmp_region + CONFIG_WEDGE_TMP_REGION;
-xen_shared_info = pdir_region + CONFIG_WEDGE_PDIR_REGION;
+xen_shared_info = tmp_region + CONFIG_WEDGE_TMP_REGION;
 _start_wedge = CONFIG_WEDGE_VIRT + CONFIG_WEDGE_WINDOW;
+
+pdir_region = pgtab_region + (pgtab_region >> (PAGEDIR_BITS - PAGE_BITS));
 
 #if defined(CONFIG_VMI_LINKER_SCRIPT)
 #include "../ia32/vmi.lds"

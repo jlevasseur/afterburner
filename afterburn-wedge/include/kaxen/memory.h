@@ -27,8 +27,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: memory.h,v 1.25 2006-01-11 18:31:52 stoess Exp $
- *
  ********************************************************************/
 #ifndef __AFTERBURN_WEDGE__INCLUDE__KAXEN__MEMORY_H__
 #define __AFTERBURN_WEDGE__INCLUDE__KAXEN__MEMORY_H__
@@ -290,7 +288,7 @@ private:
     pgent_t *get_boot_ptab( word_t pdir_entry )
     	{ return (pgent_t *)(xen_start_info.pt_base + PAGE_SIZE*(pdir_entry-boot_pdir_start_entry+1)); }
     pgent_t *get_pdir()
-	{ return pdir_region; };
+	{ return pdir_region; }
     pgent_t *get_ptab( word_t pdir_entry )
 	{ return (pgent_t *)(word_t(pgtab_region) + PAGE_SIZE*pdir_entry); }
     pgent_t *get_guest_pdir()
