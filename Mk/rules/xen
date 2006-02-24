@@ -1,0 +1,58 @@
+
+xen-2-version-$(cfg_xen_2_0_2) = 2.0.2
+xen-2-version-$(cfg_xen_2_0_7) = 2.0.7
+xen-3-version-$(cfg_xen_3_0_1) = 3.0.1
+
+version_xen-2 := $(xen-2-version-y)
+version_xen-3 := $(xen-3-version-y)
+tarball_xen-2 = xen-$(version_xen-2)-src.tgz
+tarball_xen-3 = xen-$(version_xen-3)-src.tgz
+unpack_xen-2 = xen-$(version_xen-2)
+unpack_xen-3 = xen-$(version_xen-3)
+url_xen-2 = http://www.cl.cam.ac.uk/Research/SRG/netos/xen/downloads/$(tarball_xen-2)
+url_xen-3 = http://www.cl.cam.ac.uk/Research/SRG/netos/xen/downloads/$(tarball_xen-3)
+patch-file_xen-2 = $(afterburn_dir)/patches/xen/xen-$(version_xen-2)-afterburn.patch
+patch-file_xen-3 = $(afterburn_dir)/patches/xen/xen-$(version_xen-3)-afterburn.patch
+
+
+install-$(cfg_xen_2) += install-xen-2
+install-$(cfg_xen_3) += install-xen-3
+
+.PHONY: install-xen-2 install-xen-3
+.PHONY: patch-xen-2 patch-xen-3
+.PHONY: clean-xen-2 clean-xen-3
+
+install-xen-2: $(cfg_boot_dir)/xen-$(version_xen-2).gz
+install-xen-3: $(cfg_boot_dir)/xen-$(version_xen-3).gz
+
+receipts/patch-xen-$(version_xen-2): name=xen-2
+receipts/patch-xen-$(version_xen-2): $(patch-file_xen-2)
+receipts/patch-xen-$(version_xen-3): name=xen-3
+receipts/patch-xen-$(version_xen-3): $(patch-file_xen-3)
+
+
+$(cfg_boot_dir)/xen-$(version_xen-2).gz: $(cfg_src_dir)/$(unpack_xen-2)/xen/xen.gz
+	$(Q) mkdir -p $(cfg_boot_dir)
+	$(Q) cp $< $@
+
+$(cfg_boot_dir)/xen-$(version_xen-3).gz: $(cfg_src_dir)/$(unpack_xen-3)/xen/xen.gz
+	$(Q) mkdir -p $(cfg_boot_dir)
+	$(Q) cp $< $@
+
+xen_opt += verbose=y
+
+$(cfg_src_dir)/$(unpack_xen-2)/xen/xen.gz: receipts/patch-xen-$(version_xen-2)
+	@echo "Building $@"
+	$(Q) if [ -d $(cfg_src_dir)/$(unpack_xen-2)/xen/figlet ] ; then cd $(cfg_src_dir)/$(unpack_xen-2)/xen/figlet && make -s ; else cd $(cfg_src_dir)/$(unpack_xen-2)/xen/tools/figlet && make -s ; fi
+	$(Q) (cd $(cfg_src_dir)/$(unpack_xen-2) && make -s xen $(xen_opt))
+
+$(cfg_src_dir)/$(unpack_xen-3)/xen/xen.gz: receipts/patch-xen-$(version_xen-3)
+	@echo "Building $@"
+	$(Q) (cd $(cfg_src_dir)/$(unpack_xen-3) && make -s xen $(xen_opt))
+
+
+clean-xen-2:
+	-$(Q) (cd $(cfg_src_dir)/$(unpack_xen-2)/xen && make -s clean)
+clean-xen-3:
+	-$(Q) (cd $(cfg_src_dir)/$(unpack_xen-3)/xen && make -s clean)
+

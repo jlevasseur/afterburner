@@ -1,0 +1,75 @@
+######################################################################
+#
+# Copyright (C) 2005, University of Karlsruhe
+#
+# File path:     afterburn-wedge/Mk/config/Makefile
+# Description:   Process configuration files.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+# 1. Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 2. Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#
+# THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+# OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+# LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+# OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+# SUCH DAMAGE.
+#
+# $Id: Makefile,v 1.4 2005/07/14 15:11:22 joshua Exp $
+#
+######################################################################
+
+afterburn_dir	?= ..
+config_dir	?= .
+build_dir	?= .
+config_dir	?= .
+
+cmlpath=	$(afterburn_dir)/afterburn-wedge/contrib/cml2
+cmlcompile=	$(cmlpath)/cmlcompile.py
+cmlconfig=	$(cmlpath)/cmlconfigure.py
+cmlconfigtrans=	$(cmlpath)/configtrans.py
+
+
+cml_input=	config.cml wedge.cml guests.cml
+
+CMLBATCH_PARAMS ?=
+
+$(config_dir)/rules.out: $(cml_input)
+	@$(cmlcompile) -o $@ $<
+
+##  We not only need to force the configuration system to run every time,
+##  but we must give parameters based on the build target even though the
+##  same file is generated from every rule.  The trick is to use phony
+##  targets, and to ensure that no rule mentions the output file, which
+##  is $(config_dir)/config.out.
+.PHONY: cml-config
+cml-config: $(config_dir)/rules.out
+	@$(cmlconfig) $(type) -o $(config_dir)/config.out \
+	   -i $(config_dir)/config.out \
+	   $(addprefix -D,$(CMLBATCH_PARAMS)) $(config_dir)/rules.out
+
+$(config_dir)/config.h: $(config_dir)/config.out
+	@$(cmlconfigtrans) -h $(config_dir)/config.h -s $(config_dir)/.config $<
+
+.PHONY: batchconfig ttyconfig menuconfig xconfig
+menuconfig : type=-c
+batchconfig: type=-b
+ttyconfig  : type=-t
+xconfig    : type=-x
+
+menuconfig : cml-config
+batchconfig: cml-config
+ttyconfig  : cml-config
+xconfig    : cml-config
+
