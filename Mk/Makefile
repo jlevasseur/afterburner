@@ -37,6 +37,8 @@ export LD_LIBRARY_PATH
 
 ##  Include in order of dependencies.
 include rules/idl4
+include rules/antlr
+include rules/afterburner
 include rules/xen
 
 .PHONY: world install
@@ -58,6 +60,14 @@ define do_retrieve
     mkdir -p $(cfg_archive_dir) && \
     echo "Retrieving the remote archive for $1" && \
     trap "curl --output $(cfg_archive_dir)/$(tarball_$1) $(url_$1) && exit 0" ERR && wget -O $(cfg_archive_dir)/$(tarball_$1) $(url_$1) ; \
+  fi
+endef
+
+define do_unpack
+  if [ ! -d "$(cfg_src_dir)/$(unpack_$1)" ] ; then \
+    $(call do_retrieve,$1) && \
+    mkdir -p $(cfg_src_dir)/$(unpack_$1) && \
+    (cd $(cfg_src_dir)/$(unpack_$1) && tar --strip-components=1 $(call untar_opts,$(tarball_$1)) $(cfg_archive_dir)/$(tarball_$1)) ; \
   fi
 endef
 

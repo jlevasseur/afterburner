@@ -25,6 +25,7 @@ menu main_menu
 	boot_menu
 	wedge_menu
 	guests_menu
+	pkgs_menu
 
 menu dir_menu
 	common_dir$
@@ -57,6 +58,7 @@ default grub_dir from "(nd)/tftpboot/afterburn"
 
 source "wedge.cml"
 source "guests.cml"
+source "pkgs.cml"
 
 start main_menu
 

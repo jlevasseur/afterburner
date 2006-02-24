@@ -39,6 +39,7 @@ derive linux_2_6 from linux_2_6_driver or linux_2_6_qemu
 derive linux_2_4 from linux_2_4_driver
 
 derive afterburner from linux_2_6 or linux_2_4
+derive antlr from afterburner
 
 unless linux_2_6 suppress linux_2_6_version
 unless linux_2_4 suppress linux_2_4_version
