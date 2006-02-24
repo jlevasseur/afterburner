@@ -266,8 +266,8 @@ diff -Naur linux-2.6.9.pristine/afterburn/afterburn.c linux-2.6.9/afterburn/afte
 +#endif
 diff -Naur linux-2.6.9.pristine/afterburn/annotate.h linux-2.6.9/afterburn/annotate.h
 --- linux-2.6.9.pristine/afterburn/annotate.h	1970-01-01 00:00:00.000000000 +0000
-+++ linux-2.6.9/afterburn/annotate.h	2005-11-30 12:45:35.000000000 +0000
-@@ -0,0 +1,282 @@
++++ linux-2.6.9/afterburn/annotate.h	2006-02-23 09:53:52.000000000 +0000
+@@ -0,0 +1,442 @@
 +#ifndef __AFTERBURN__ANNOTATE_H__
 +#define __AFTERBURN__ANNOTATE_H__
 +
@@ -547,6 +547,166 @@ diff -Naur linux-2.6.9.pristine/afterburn/annotate.h linux-2.6.9/afterburn/annot
 +}
 +
 +
++static inline void 
++ioapic_write_annotate(unsigned int b, volatile void __iomem *addr)
++{
++    __asm__ __volatile__ (
++	    "7777:"
++	    "mov %0, %1\n" 
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "7778:"
++	    ".pushsection .afterburn.ioapic\n"
++	    ".align 4\n"
++	    ".long 7777b\n"
++	    ".long 7778b\n"
++	    ".popsection\n"
++	    : : "r"(b), "m"(*(unsigned long *)addr) : "memory" );
++}
++
++static inline unsigned int 
++ioapic_read_annotate(const volatile void __iomem *addr)
++{
++    unsigned int temp;
++    __asm__ __volatile__ (
++	    "7777:"
++	    "mov %1, %0\n" 
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "7778:"
++	    ".pushsection .afterburn.ioapic\n"
++	    ".align 4\n"
++	    ".long 7777b\n"
++	    ".long 7778b\n"
++	    ".popsection\n"
++	    : "=r"(temp) : "m"(*(unsigned long *)addr) );
++    return temp;
++}
++
++
++static inline void 
++lapic_write_annotate(unsigned int b, volatile void __iomem *addr)
++{
++    __asm__ __volatile__ (
++	    "7777:"
++	    "mov %0, %1\n" 
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "7778:"
++	    ".pushsection .afterburn.lapic\n"
++	    ".align 4\n"
++	    ".long 7777b\n"
++	    ".long 7778b\n"
++	    ".popsection\n"
++	    : : "r"(b), "m"(*(unsigned long *)addr) : "memory" );
++}
++
++static inline void 
++lapic_xchg_annotate(unsigned int b, volatile void __iomem *addr)
++{
++    __asm__ __volatile__ (
++	    "7777:"
++	    "xchgl %0, %1\n" 
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "7778:"
++	    ".pushsection .afterburn.lapic\n"
++	    ".align 4\n"
++	    ".long 7777b\n"
++	    ".long 7778b\n"
++	    ".popsection\n"
++	    : : "r"(b), "m"(*(unsigned long *)addr) : "memory" );
++}
++
++
++static inline unsigned int 
++lapic_read_annotate(const volatile void __iomem *addr)
++{
++    unsigned int temp;
++    __asm__ __volatile__ (
++	    "7777:"
++	    "mov %1, %0\n" 
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "nop\n"
++	    "7778:"
++	    ".pushsection .afterburn.lapic\n"
++	    ".align 4\n"
++	    ".long 7777b\n"
++	    ".long 7778b\n"
++	    ".popsection\n"
++	    : "=r"(temp) : "m"(*(unsigned long *)addr) );
++    return temp;
++}
++
++
++
 +
 +
 +#endif /* __AFTERBURN__ANNOTATE_H__ */
@@ -796,6 +956,49 @@ diff -Naur linux-2.6.9.pristine/drivers/net/ns83820.c linux-2.6.9/drivers/net/ns
  
  		skb->dev = ndev;
  		if (gfp != GFP_ATOMIC)
+diff -Naur linux-2.6.9.pristine/include/asm-i386/apic.h linux-2.6.9/include/asm-i386/apic.h
+--- linux-2.6.9.pristine/include/asm-i386/apic.h	2004-10-18 21:55:29.000000000 +0000
++++ linux-2.6.9/include/asm-i386/apic.h	2006-02-23 09:53:52.000000000 +0000
+@@ -29,6 +29,17 @@
+ 			printk(s, ##a);    \
+ 	} while (0)
+ 
++#if defined(CONFIG_AFTERBURN_ANNOTATIONS)
++
++#include "../../afterburn/annotate.h"
++#define __apic_read			lapic_read_annotate
++#define __apic_write			lapic_write_annotate
++#define __apic_write_atomic		lapic_xchg_annotate
++#else
++#define __apic_read(a)		*(a)
++#define __apic_write(v,a)		*(a) = v
++#define __apic_write_atomic(v,a)	xchg(a, v)
++#endif
+ 
+ #ifdef CONFIG_X86_LOCAL_APIC
+ 
+@@ -38,17 +49,18 @@
+ 
+ static __inline void apic_write(unsigned long reg, unsigned long v)
+ {
+-	*((volatile unsigned long *)(APIC_BASE+reg)) = v;
++	__apic_write(v, (volatile unsigned long *)(APIC_BASE+reg));
+ }
+ 
+ static __inline void apic_write_atomic(unsigned long reg, unsigned long v)
+ {
+-	xchg((volatile unsigned long *)(APIC_BASE+reg), v);
++	__apic_write_atomic(v, (volatile unsigned long *)(APIC_BASE+reg));
+ }
+ 
+ static __inline unsigned long apic_read(unsigned long reg)
+ {
+-	return *((volatile unsigned long *)(APIC_BASE+reg));
++	
++	return __apic_read((volatile unsigned long *)(APIC_BASE+reg));
+ }
+ 
+ static __inline__ void apic_wait_icr_idle(void)
 diff -Naur linux-2.6.9.pristine/include/asm-i386/dma-mapping.h linux-2.6.9/include/asm-i386/dma-mapping.h
 --- linux-2.6.9.pristine/include/asm-i386/dma-mapping.h	2004-10-18 21:55:36.000000000 +0000
 +++ linux-2.6.9/include/asm-i386/dma-mapping.h	2005-11-02 08:56:41.000000000 +0000
@@ -921,6 +1124,52 @@ diff -Naur linux-2.6.9.pristine/include/asm-i386/io.h linux-2.6.9/include/asm-i3
  
  /*
   * readX/writeX() are used to access memory mapped devices. On some
+diff -Naur linux-2.6.9.pristine/include/asm-i386/io_apic.h linux-2.6.9/include/asm-i386/io_apic.h
+--- linux-2.6.9.pristine/include/asm-i386/io_apic.h	2004-10-18 21:54:38.000000000 +0000
++++ linux-2.6.9/include/asm-i386/io_apic.h	2006-02-23 09:53:52.000000000 +0000
+@@ -162,16 +162,26 @@
+ /* non-0 if default (table-less) MP configuration */
+ extern int mpc_default_type;
+ 
++#if defined(CONFIG_AFTERBURN_ANNOTATIONS)
++#include "../../afterburn/annotate.h"
++#define __io_apic_read			ioapic_read_annotate
++#define __io_apic_write			ioapic_write_annotate
++#else
++#define __io_apic_read(a)		*(a)
++#define __io_apic_write(v,a)            *(a) = v
++
++#endif
++
+ static inline unsigned int io_apic_read(unsigned int apic, unsigned int reg)
+ {
+-	*IO_APIC_BASE(apic) = reg;
+-	return *(IO_APIC_BASE(apic)+4);
++	__io_apic_write(reg, IO_APIC_BASE(apic));
++	return __io_apic_read(IO_APIC_BASE(apic)+4);
+ }
+ 
+ static inline void io_apic_write(unsigned int apic, unsigned int reg, unsigned int value)
+ {
+-	*IO_APIC_BASE(apic) = reg;
+-	*(IO_APIC_BASE(apic)+4) = value;
++	__io_apic_write(reg, IO_APIC_BASE(apic));
++	__io_apic_write(value, IO_APIC_BASE(apic)+4);
+ }
+ 
+ /*
+@@ -184,8 +194,9 @@
+ static inline void io_apic_modify(unsigned int apic, unsigned int reg, unsigned int value)
+ {
+ 	if (sis_apic_bug)
+-		*IO_APIC_BASE(apic) = reg;
+-	*(IO_APIC_BASE(apic)+4) = value;
++	    __io_apic_write(reg, IO_APIC_BASE(apic));
++
++	__io_apic_write(value, IO_APIC_BASE(apic)+4);
+ }
+ 
+ /* 1 if "noapic" boot option passed */
 diff -Naur linux-2.6.9.pristine/include/asm-i386/page.h linux-2.6.9/include/asm-i386/page.h
 --- linux-2.6.9.pristine/include/asm-i386/page.h	2004-10-18 21:53:22.000000000 +0000
 +++ linux-2.6.9/include/asm-i386/page.h	2005-12-23 13:16:36.000000000 +0000

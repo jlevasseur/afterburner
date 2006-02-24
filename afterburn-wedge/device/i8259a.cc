@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: i8259a.cc,v 1.18 2005/12/28 16:14:03 joshua Exp $
- *
  ********************************************************************/
 
 #include <device/portio.h>
@@ -85,9 +83,7 @@ bool i8259a_t::pending_vector( word_t & vector, word_t & irq, const word_t irq_b
 		bit_set_atomic( pic_irq, irq_in_service );
 	    
 	    vector = pic_irq + icw2.get_idt_offset();
-#if defined(CONFIG_DEVICE_PASSTHRU)
-	    intlogic.set_hwirq_mask(irq);
-#endif
+
 	    if ((irq_request & ~irq_mask) == 0)
 		intlogic.clear_vector_cluster(irq_base);
 
@@ -104,6 +100,10 @@ void i8259a_t::raise_irq( word_t irq, const word_t irq_base)
     
     bit_set_atomic( pic_irq, irq_request );
     
+#if defined(CONFIG_DEVICE_PASSTHRU)
+    get_intlogic().set_hwirq_mask(irq);
+#endif
+
     if (debug)
 	con << "raise irq " << irq << " pic irq " << pic_irq << "\n";
     

@@ -55,7 +55,7 @@ create-patch-xen-2: $(ARCHIVE_DIR)/$(TARBALL_xen-2)
 create-patch-xen-3: $(ARCHIVE_DIR)/$(TARBALL_xen-3)
 
 create-pristine = echo "Creating $(SRCDIR)/$(UNPACK_$(1)).pristine" \
-    && if [ ! "-d $(SRCDIR)/$(UNPACK_$(1)).pristine" ] ; \
+    && if [ ! -d "$(SRCDIR)/$(UNPACK_$(1)).pristine" ] ; \
     then mkdir -p $(SRCDIR)/$(UNPACK_$(1)).pristine \
     && cd $(SRCDIR)/$(UNPACK_$(1)).pristine \
     && tar --strip-components=1 $(call untar_opts,$(TARBALL_$(1))) $(ARCHIVE_DIR)/$(TARBALL_$(1)) \

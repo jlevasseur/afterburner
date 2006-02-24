@@ -171,9 +171,12 @@ void SECTION(".text.irq") xen_deliver_irq( xen_frame_t *frame )
 	return;
     }
 
+    // Now that interrupts are disabled, future callbacks won't attempt
+    // to also deliver interrupts; they'll resume execution at this point.
+
     word_t vector, irq;
     if( !intlogic.pending_vector(vector, irq) ) {
-	// Another CPU claimed the interrupt.  None left to deliver.
+	// Another callback or CPU claimed the interrupt.  None left to deliver.
 	if( saved_int_state )
 	    get_cpu().restore_interrupts( saved_int_state );
 	return;
@@ -297,6 +300,19 @@ restart:
 	INC_BURN_REGION_WORD(callback_irq_raise, 0);
     }
 
+    if( at_idle(frame) ) {
+	// It is only safe to touch the idle_redirect while at_idle().
+	// In the case of recursive callbacks, only one interrupted frame 
+	// can be at_idle() at a time.  But it is possible for the idle
+	// loop to be interrupted multiple times, and thus to have
+	// successive frames to be at_idle(), in which case we must not 
+	// overwrite the prior redirect.
+	// Race between is_redirect() and do_redirect() is protected by 
+	// xen_upcall_mask.
+	if( !idle_redirect->is_redirect() )
+	    idle_redirect->do_redirect();
+    }
+
     ASSERT( xen_upcall_mask );
     xen_upcall_mask = 0;
     if( xen_upcall_pending ) {
@@ -305,17 +321,10 @@ restart:
 	goto restart;
     }
 
-    if( at_idle(frame) ) {
-	// It is only safe to touch the idle_redirect while at_idle().
-	// In the case of recursive callbacks, only one interrupted frame 
-	// can be at_idle() at a time.  But it is possible for the idle
-	// loop to be interrupted multiple times, and thus to have
-	// successive frames to be at_idle(), in which case we must not 
-	// overwrite the prior redirect.
-	if( !idle_redirect->is_redirect() )
-	    idle_redirect->do_redirect();
-    }
-    else if( async_safe(frame) ) {
+    // After this point, new callbacks may arrive, cancelling any of the
+    // following code.
+
+    if( async_safe(frame) ) {
      	INC_BURN_COUNTER(async_delivery);
 	xen_deliver_irq( frame );
     }
@@ -348,7 +357,7 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
     }
 
     u64_t time_ns = xen_shared_info.get_current_time_ns( 
-	    current_cycles + cycles_10ms );
+	    cycles_10ms + last_timer_cycles );
 
     /* Xen has a silly race condition ... if the time-out event comes between
      * XEN_set_timer_op() and XEN_block(), then we'll block indefinitely.
@@ -422,7 +431,7 @@ void backend_interruptible_idle( burn_redirect_frame_t *redirect_frame )
     	    : /* clobbers */
   	    "flags", "memory"
 	);
-    ADD_PERF_COUNTER(XEN_set_timer_op, get_cycles() - cycles);
+    ADD_PERF_COUNTER(XEN_set_timer_op_cycles, get_cycles() - cycles);
 
     /* If we had an interrupt prior to idle_race_start, but after the
      * last check, then we need to fill out the redirect frame.

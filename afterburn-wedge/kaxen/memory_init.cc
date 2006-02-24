@@ -245,7 +245,7 @@ void xen_memory_t::map_boot_page( word_t vaddr, word_t maddr, bool read_only )
 
 void xen_memory_t::alloc_boot_region( word_t vaddr, word_t size )
 {
-    con << "alloc_boot_region " << (void*)vaddr << " " << (void*)size << "\n";
+    //con << "alloc_boot_region " << (void*)vaddr << " " << (void*)size << "\n";
 
     if( size % PAGE_SIZE )
 	size = (size + PAGE_SIZE) & PAGE_MASK;

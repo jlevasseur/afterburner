@@ -106,8 +106,9 @@ endif
 ######################################################################
 VERSION_linux-2.6 = 2.6.9
 #VERSION_linux-2.6 = 2.6.12.3
-VERSION_linux-2.6 = 2.6.12.6
+#VERSION_linux-2.6 = 2.6.12.6
 VERSION_linux-2.6-vmi = 2.6.12.3
+VERSION_linux-2.6-vmi = 2.6.15
 VERSION_linux-2.4 = 2.4.31
 #VERSION_linux-2.4 = 2.4.28
 VERSION_binutils = 2.15.91.0.2
@@ -239,6 +240,8 @@ export LD_LIBRARY_PATH
 AFTERBURN_BINUTILS := $(INSTALL_ROOT)/bin
 export AFTERBURN_BINUTILS
 
+.SECONDARY:
+
 all: help
 
 clean: help-clean
@@ -351,7 +354,7 @@ PATCH = patch -Np1
 
 .PHONY: patch-linux-2.6 patch-xen-2 patch-qemu patch-idl4 patch-pistachio patch-linux-2.4
 patch-linux-2.6: receipts/patch-linux-$(VERSION_linux-2.6)
-patch-linux-2.6-vmi: receipts/patch-linux-$(VERSION_linux-2.6-vmi)
+patch-linux-2.6-vmi: receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi
 patch-linux-2.4: receipts/patch-linux-$(VERSION_linux-2.4)
 patch-xen-2: receipts/patch-xen-$(VERSION_xen-2)
 patch-xen-3: receipts/patch-xen-$(VERSION_xen-3)
@@ -361,6 +364,7 @@ patch-pistachio: receipts/patch-pistachio
 
 PATCH_FILE-linux-2.6 = $(CURDIR)/linux/linux-$(VERSION_linux-2.6)-big-afterburn.patch
 PATCH_FILE-linux-2.6-vmi = $(CURDIR)/linux/linux-$(VERSION_linux-2.6-vmi)-vmi.patch
+PATCH_FILE-linux-2.6-vmi = $(CURDIR)/linux/linux-$(VERSION_linux-2.6-vmi)-2.6.16-rc3-vmi.patch
 PATCH_FILE-linux-2.4 = $(CURDIR)/linux/linux-$(VERSION_linux-2.4)-big-afterburn.patch
 PATCH_FILE-qemu = $(CURDIR)/qemu/qemu-$(VERSION_qemu).patch
 PATCH_FILE-xen-2 = $(CURDIR)/xen/xen-$(VERSION_xen-2)-afterburn.patch
@@ -371,8 +375,8 @@ PATCH_FILE-pistachio = $(CURDIR)/pistachio/pistachio-kernel-perfmon.patch
 receipts/patch-linux-$(VERSION_linux-2.6): type=linux-2.6
 receipts/patch-linux-$(VERSION_linux-2.6): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6) $(PATCH_FILE-linux-2.6)
 
-receipts/patch-linux-$(VERSION_linux-2.6-vmi): type=linux-2.6-vmi
-receipts/patch-linux-$(VERSION_linux-2.6-vmi): $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi) $(PATCH_FILE-linux-2.6-vmi)
+receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi: type=linux-2.6-vmi
+receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi: $(ARCHIVE_DIR)/$(TARBALL_linux-2.6-vmi) $(PATCH_FILE-linux-2.6-vmi)
 
 receipts/patch-linux-$(VERSION_linux-2.4): type=linux-2.4
 receipts/patch-linux-$(VERSION_linux-2.4): $(ARCHIVE_DIR)/$(TARBALL_linux-2.4) $(PATCH_FILE-linux-2.4)
@@ -1011,8 +1015,9 @@ help-build::
 	@echo "  build-wedge"
 	@echo "    build-wedge-l4ka-passthru"
 	@echo "    build-wedge-kaxen-passthru"
-	@echo "    build-wedge-kaxen-vmi-passthru"
 	@echo "    build-wedge-kaxen-3-passthru"
+	@echo "    build-wedge-kaxen-vmi-passthru"
+	@echo "    build-wedge-kaxen-3-vmi-passthru"
 	@echo "    build-wedge-l4ka"
 	@echo "    build-wedge-kaxen"
 	@echo "    build-wedge-kaxen-vmi"
@@ -1020,7 +1025,9 @@ help-clean::
 	@echo "  clean-wedge"
 	@echo "    clean-wedge-l4ka-passthru"
 	@echo "    clean-wedge-kaxen-passthru"
+	@echo "    clean-wedge-kaxen-3-passthru"
 	@echo "    clean-wedge-kaxen-vmi-passthru"
+	@echo "    clean-wedge-kaxen-3-vmi-passthru"
 	@echo "    clean-wedge-l4ka"
 	@echo "    clean-wedge-kaxen-vmi"
 build-runtime-i386:: build-wedge
@@ -1068,6 +1075,12 @@ OPTS_wedge-kaxen-vmi-passthru-perf = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-2)/xen/include/public \
   XEN_2_0 VMI_SUPPORT=y WEDGE_VIRT=0xe0000000 WEDGE_VIRT_END=0xf0000000
 
+OPTS_wedge-kaxen-3-vmi-passthru = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
+  OPTIMIZE=y KAXEN_INT_FP=y \
+  KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-3)/xen/include/public \
+  XEN_3_0 VMI_SUPPORT=y WEDGE_VIRT=0xe0000000 WEDGE_VIRT_END=0xf0000000
+
+
 OPTS_wedge-kaxen-3-passthru = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU \
   KAXEN_HYP_INCLUDE=$(SRCDIR)/$(UNPACK_xen-3)/xen/include/public KAXEN_INT_FP \
   XEN_3_0
@@ -1098,20 +1111,20 @@ OPTS_wedge-kaxen-vmi-guest = WEDGE_KAXEN SMP=n DEVICE_PASSTHRU=n \
   XEN_2_0 VMI_SUPPORT=y WEDGE_VIRT=0xe0000000 WEDGE_VIRT_END=0xf0000000
 
 
+$(BOOT_DIR):
+	$(Q) mkdir -p $(BOOT_DIR)
+	
 
-.PRECIOUS: $(BOOT_DIR)/afterburn-wedge-%
-$(BOOT_DIR)/afterburn-wedge-%: $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge
+$(BOOT_DIR)/afterburn-wedge-%: $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge | $(BOOT_DIR)
 	$(Q) mkdir -p $(BOOT_DIR)
 	$(Q) cp $< $@
 	$(Q) $(BOOT_INSTALL_CMD)
 
-.PRECIOUS: $(BUILD_DIR)/afterburn-wedge-%/config/config.h
 $(BUILD_DIR)/afterburn-wedge-%/config/config.h:
 	$(Q) mkdir -p $(BUILD_DIR)
 	$(Q) (cd ../afterburn-wedge && make BUILDDIR=$(BUILD_DIR)/afterburn-wedge-$*)
 	$(Q) (cd $(BUILD_DIR)/afterburn-wedge-$* && make CMLBATCH_PARAMS='$(OPTS_wedge-$*)' batchconfig)
 
-.PRECIOUS: $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge
 $(BUILD_DIR)/afterburn-wedge-%/afterburn-wedge: $(BUILD_DIR)/afterburn-wedge-%/config/config.h
 	@echo Building the $* Afterburn Wedge in $(@D)
 	$(Q) (cd $(@D) && make -s $(OPTS_wedge))
@@ -1321,7 +1334,6 @@ build-modules-2.6-vmi-%:
 	@echo "Finished $@"
 
 
-.PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinuz
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinuz: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux
 	$(Q) strip -o $(<D)/vmlinux.stripped $(<D)/vmlinux
 	$(Q) gzip -fc $(<D)/vmlinux.stripped > $(<D)/vmlinuz
@@ -1336,15 +1348,15 @@ $(BOOT_DIR)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-%: $(BUILD_DIR)/$(UNPACK_linux-
 	$(Q) cp $< $@
 	$(Q) $(BOOT_INSTALL_CMD)
 
-.PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config
-$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config: ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6-vmi)-vmi-%
+$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config: \
+  ../afterburn-wedge/doc/linux-2.6/dot-config-$(VERSION_linux-2.6-vmi)-vmi-% \
+  receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi
 	$(Q) mkdir -p $(@D)
 	$(Q) cat $< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-vmi-$*"/g ; }' > $@
 
 .PRECIOUS: $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/arch/i386/boot/bzImage
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/vmlinux \
 $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/arch/i386/boot/bzImage: \
-		receipts/patch-linux-$(VERSION_linux-2.6-vmi)-vmi \
 		$(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-%/.config
 	@echo Building Linux in $(BUILD_DIR)/$(UNPACK_linux-2.6-vmi)-$*
 	$(Q) mkdir -p $(INSTALL_ROOT)
@@ -1548,14 +1560,14 @@ create-grub-body:: \
 	@echo "module = $(GRUB_BOOT)/afterburn-wedge-kaxen-passthru $(LINUX_BOOT_PARAMS)" >> $(g)
 	@echo "module = $(GRUB_BOOT)/vmlinuz-$(VERSION_linux-2.6)-driver" >> $(g)
 	@echo >> $(g)
-	@echo "title = VMI Linux on KaXen" >> $(g)
-	@echo "kernel = $(GRUB_BOOT)/xen-$(VERSION_xen-2).gz dom0_mem=$(VMSIZE) com1=115200,8n1 ignorebiostables=1 noacpi=1 nosmp=1 noht=1 noapic=1" >> $(g)
-	@echo "module = $(GRUB_BOOT)/afterburn-wedge-kaxen-vmi-passthru $(LINUX_BOOT_PARAMS) mem=nopentium" >> $(g)
-	@echo "module = $(GRUB_BOOT)/vmlinuz-$(VERSION_linux-2.6-vmi)-vmi-driver" >> $(g)
-	@echo >> $(g)
-	@echo "title = VMI Linux on raw hardware" >> $(g)
-	@echo "kernel = $(GRUB_BOOT)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-driver $(LINUX_BOOT_PARAMS)" >> $(g)
-	@echo >> $(g)
+#	@echo "title = VMI Linux on KaXen" >> $(g)
+#	@echo "kernel = $(GRUB_BOOT)/xen-$(VERSION_xen-2).gz dom0_mem=$(VMSIZE) com1=115200,8n1 ignorebiostables=1 noacpi=1 nosmp=1 noht=1 noapic=1" >> $(g)
+#	@echo "module = $(GRUB_BOOT)/afterburn-wedge-kaxen-vmi-passthru $(LINUX_BOOT_PARAMS) mem=nopentium" >> $(g)
+#	@echo "module = $(GRUB_BOOT)/vmlinuz-$(VERSION_linux-2.6-vmi)-vmi-driver" >> $(g)
+#	@echo >> $(g)
+#	@echo "title = VMI Linux on raw hardware" >> $(g)
+#	@echo "kernel = $(GRUB_BOOT)/bzImage-$(VERSION_linux-2.6-vmi)-vmi-driver $(LINUX_BOOT_PARAMS)" >> $(g)
+#	@echo >> $(g)
 
 
 grub-marzipan-device-%:

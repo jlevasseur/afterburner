@@ -202,7 +202,7 @@ static void irq_handler_thread( void *param, hthread_t *hthread )
 
 	    if( do_timer ) {
 		last_time = current_time;
-		if(debug_hw_irq ||  intlogic.is_irq_traced(timer_irq))
+		if(intlogic.is_irq_traced(timer_irq))
 		    con << "timer irq " << timer_irq 
 			<< ", int flag: " << get_cpu().interrupts_enabled()
 			<< "\n";

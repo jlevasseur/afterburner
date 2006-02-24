@@ -8,9 +8,6 @@ Alternatively, to manually apply the patches, change into the source
 directory of the target, and then execute the patch command with the
 options -Np1
 
-The URLs that we used for retrieving our source archives, for generating 
-the patches, are listed in the file SOURCES.
-
 For more detailed information, consult "The Afterburner User Manual",
 which is located in the afterburner/afterburn-wedge/doc directory.
 

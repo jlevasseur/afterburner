@@ -233,14 +233,18 @@ INLINE int XEN_update_va_mapping( word_t addr, word_t val, word_t flags )
     INC_BURN_COUNTER(XEN_update_va_mapping);
     ON_BURN_COUNTER(cycles_t cycles = get_cycles());
     int ret;
-    word_t r1, r2, r3;
+    word_t r1, r2, r3, r4;
 #ifdef CONFIG_XEN_2_0
     addr >>= PAGE_BITS;
 #endif
     __asm__ __volatile__ ( TRAP_INSTR
-	    : "=a" (ret), "=b" (r1), "=c" (r2), "=d" (r3)
+	    : "=a" (ret), "=b" (r1), "=c" (r2), "=d" (r3), "=S" (r4)
 	    : "0" (__HYPERVISOR_update_va_mapping), "1" (addr),
+#ifdef CONFIG_XEN_2_0
 	      "2" (val), "3" (flags)
+#else
+	      "2" (val), "3" (0/*PAE*/), "4" (flags)
+#endif
 	    : "memory"
 	    );
     ADD_PERF_COUNTER(XEN_update_va_mapping_cycles, get_cycles() - cycles);

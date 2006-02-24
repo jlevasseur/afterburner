@@ -26,8 +26,6 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: backend.cc,v 1.16 2005/12/21 09:35:02 stoess Exp $
- *
  ********************************************************************/
 
 #include INC_WEDGE(console.h)
@@ -111,9 +109,7 @@ bool backend_unmask_device_interrupt( u32_t interrupt )
 #if 0
     msg_device_ack_build( interrupt );
     L4_MsgTag_t tag = L4_Send( get_vcpu().irq_ltid );
-    ASSERT( !L4_IpcFailed(tag) );
-#endif
-
+#else
     L4_ThreadId_t ack_tid = L4_nilthread;
     L4_MsgTag_t tag = { raw : 0 };
     L4_Set_Propagation (&tag);
@@ -129,6 +125,7 @@ bool backend_unmask_device_interrupt( u32_t interrupt )
     
     //msg_device_ack_build( interrupt );
     tag = L4_Reply( ack_tid );
+#endif
     ASSERT( !L4_IpcFailed(tag) );
     return !L4_IpcFailed(tag);
 }
