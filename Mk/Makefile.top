@@ -1,0 +1,14 @@
+
+Q ?= @
+
+all:
+
+mk_dir = $(afterburn_dir)/Mk
+
+include $(mk_dir)/Makefile.cml
+include config.out
+
+ifeq ($(cfg_cml),y)
+include $(mk_dir)/Makefile.world
+endif
+

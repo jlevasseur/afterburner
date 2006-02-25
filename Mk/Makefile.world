@@ -1,17 +1,4 @@
 
-Q ?= @
-
-all:
-
-## Extract the afterburn directory from the path to this Makefile.
-mk_dir := $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
-afterburn_dir ?= $(mk_dir)/..
-
-include $(mk_dir)/Makefile.cml
-include config.out
-
-ifeq ($(cfg_cml),y)
-
 install-y =
 install-n =
 
@@ -39,12 +26,14 @@ export LD_LIBRARY_PATH
 
 .SECONDARY:
 
-
 ##  Include in order of dependencies.
-include $(mk_dir)/rules/idl4
-include $(mk_dir)/rules/antlr
-include $(mk_dir)/rules/afterburner
-include $(mk_dir)/rules/xen
+includes-y =
+includes-$(cfg_idl4) += idl4
+includes-$(cfg_antlr) += antlr
+includes-$(cfg_afterburner) += afterburner
+includes-$(cfg_xen) += xen
+
+include $(addprefix $(mk_dir)/rules/,$(includes-y))
 
 .PHONY: world install
 world: $(install-y)
@@ -107,6 +96,4 @@ receipts/patch-%:
 	$(Q) (cd $(cfg_src_dir)/$(unpack_$(name)) && patch -Np1 < $(patch-file_$(name)))
 	$(Q) touch receipts/patch-$(unpack_$(name))
 	@echo "The newly patched project: $(cfg_src_dir)/$(unpack_$(name))"
-
-endif
 
