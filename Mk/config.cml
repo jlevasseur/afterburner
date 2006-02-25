@@ -16,6 +16,7 @@ archive_dir	'Archives and tar balls'
 vmsize		'Virtual machine memory size (kB)'
 linux_cmdline	'Linux command line'
 grub_dir	'Directory used within the GRUB menu.lst'
+apic		'Build APIC support?'
 console_type	'Boot console type'
 console_vga	'VGA'
 console_serial	'Serial'
@@ -41,6 +42,7 @@ choices console_type
 	default console_serial
 
 menu boot_menu
+	apic
 	grub_dir$
 	console_type
 	vmsize%
@@ -55,6 +57,9 @@ default archive_dir from "archives"
 default vmsize from 65536
 default linux_cmdline from ""
 default grub_dir from "(nd)/tftpboot/afterburn"
+default apic from n
+
+derive cml from y
 
 source "wedge.cml"
 source "guests.cml"

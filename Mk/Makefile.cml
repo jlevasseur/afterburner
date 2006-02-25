@@ -30,46 +30,51 @@
 #
 ######################################################################
 
-afterburn_dir	?= ..
-config_dir	?= .
-build_dir	?= .
-config_dir	?= .
+output_dir	?= .
 
-cmlpath=	$(afterburn_dir)/afterburn-wedge/contrib/cml2
+this_dir := $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
+
+cmlpath=	$(this_dir)/../afterburn-wedge/contrib/cml2
 cmlcompile=	$(cmlpath)/cmlcompile.py
 cmlconfig=	$(cmlpath)/cmlconfigure.py
 cmlconfigtrans=	$(cmlpath)/configtrans.py
 
+cml_input=	$(addprefix $(this_dir),config.cml wedge.cml guests.cml pkgs.cml)
 
-cml_input=	config.cml wedge.cml guests.cml pkgs.cml
+cml_params ?=
 
-CMLBATCH_PARAMS ?=
-
-$(config_dir)/rules.out: $(cml_input)
+$(output_dir)/rules.out: $(cml_input)
 	@$(cmlcompile) -o $@ $<
 
-##  We not only need to force the configuration system to run every time,
-##  but we must give parameters based on the build target even though the
-##  same file is generated from every rule.  The trick is to use phony
-##  targets, and to ensure that no rule mentions the output file, which
-##  is $(config_dir)/config.out.
-.PHONY: cml-config
-cml-config: $(config_dir)/rules.out
-	@$(cmlconfig) $(type) -o $(config_dir)/config.out \
-	   -i $(config_dir)/config.out \
-	   $(addprefix -D,$(CMLBATCH_PARAMS)) $(config_dir)/rules.out
 
-$(config_dir)/config.h: $(config_dir)/config.out
-	@$(cmlconfigtrans) -h $(config_dir)/config.h -s $(config_dir)/.config $<
+##  Auto generate the config.out only if it doesn't exist.  Since the Makefile
+##  includes the config.out, we have to ensure that the normal case
+##  excludes a rule for generating config.out.
+cml_config_in = $(wildcard $(output_dir)/config.out)
+ifeq ($(cml_config_in),)
+$(output_dir)/config.out:
+	@$(cmlconfig) -b -o $@ $(output_dir)/rules.out
+endif
+
+
+.PHONY: cml-run
+cml-run: $(output_dir)/rules.out
+	@$(cmlconfig) $(cml_type) -o $(output_dir)/config.out \
+	    -i $(output_dir)/config.out \
+	    $(addprefix -D,$(cml_params)) $(output_dir)/rules.out
+
+$(output_dir)/config.h: $(output_dir)/config.out
+	@$(cmlconfigtrans) -h $(output_dir)/config.h -s $(output_dir)/.config $<
+
 
 .PHONY: batchconfig ttyconfig menuconfig xconfig
-menuconfig : type=-c
-batchconfig: type=-b
-ttyconfig  : type=-t
-xconfig    : type=-x
+menuconfig : cml_type=-c
+batchconfig: cml_type=-b
+ttyconfig  : cml_type=-t
+xconfig    : cml_type=-x
 
-menuconfig : cml-config
-batchconfig: cml-config
-ttyconfig  : cml-config
-xconfig    : cml-config
+menuconfig : cml-run
+batchconfig: cml-run
+ttyconfig  : cml-run
+xconfig    : cml-run
 

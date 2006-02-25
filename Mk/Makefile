@@ -3,8 +3,14 @@ Q ?= @
 
 all:
 
-include Makefile.cml
--include config.out
+## Extract the afterburn directory from the path to this Makefile.
+mk_dir := $(dir $(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
+afterburn_dir ?= $(mk_dir)/..
+
+include $(mk_dir)/Makefile.cml
+include config.out
+
+ifeq ($(cfg_cml),y)
 
 install-y =
 install-n =
@@ -16,7 +22,6 @@ cfg_usr_dir :=     $(subst ",,$(cfg_usr_dir))
 cfg_boot_dir :=    $(subst ",,$(cfg_boot_dir))
 cfg_archive_dir := $(subst ",,$(cfg_archive_dir))
 
-afterburn_dir = $(dir $(CURDIR))
 ifeq ($(cfg_common_dir),.)
 cfg_common_dir = $(CURDIR)
 endif
@@ -36,10 +41,10 @@ export LD_LIBRARY_PATH
 
 
 ##  Include in order of dependencies.
-include rules/idl4
-include rules/antlr
-include rules/afterburner
-include rules/xen
+include $(mk_dir)/rules/idl4
+include $(mk_dir)/rules/antlr
+include $(mk_dir)/rules/afterburner
+include $(mk_dir)/rules/xen
 
 .PHONY: world install
 world: $(install-y)
@@ -54,6 +59,12 @@ dirs:
 	@echo "Install:  $(cfg_usr_dir)"
 	@echo "Boot:     $(cfg_boot_dir)"
 	@echo "Archives: $(cfg_archive_dir)"
+
+.PHONY: variables makefiles
+variables:
+	@echo "$(.VARIABLES)"
+makefiles:
+	@echo "$(MAKEFILE_LIST)"
 
 define do_retrieve
   if [ ! -f "$(cfg_archive_dir)/$(tarball_$1)" ] ; then \
@@ -96,4 +107,6 @@ receipts/patch-%:
 	$(Q) (cd $(cfg_src_dir)/$(unpack_$(name)) && patch -Np1 < $(patch-file_$(name)))
 	$(Q) touch receipts/patch-$(unpack_$(name))
 	@echo "The newly patched project: $(cfg_src_dir)/$(unpack_$(name))"
+
+endif
 
