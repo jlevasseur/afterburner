@@ -1,0 +1,42 @@
+
+symbols
+
+xen_menu	'Xen environment'
+
+xen_2_version	'Xen 2 version'
+xen_3_version	'Xen 3 version'
+
+xen_2_0_2	'2.0.2'
+xen_2_0_7	'2.0.7'
+xen_3_0_1	'3.0.1'
+
+wedge_kaxen_2_dom0	'Wedge (debug) Xen 2, domain 0'
+wedge_kaxen_2_dom0_perf	'Wedge         Xen 2, domain 0'
+wedge_kaxen_3_dom0	'Wedge (debug) Xen 3, domain 0'
+wedge_kaxen_3_dom0_perf	'Wedge         Xen 3, domain 0'
+
+menu xen_menu
+	wedge_kaxen_2_dom0
+	wedge_kaxen_2_dom0_perf
+	wedge_kaxen_3_dom0
+	wedge_kaxen_3_dom0_perf
+	xen_2_version
+	xen_3_version
+
+choices xen_2_version
+	xen_2_0_7
+	xen_2_0_2
+	default xen_2_0_2
+
+choices xen_3_version
+	xen_3_0_1
+	default xen_3_0_1
+
+default wedge_kaxen_2_dom0 from y
+
+derive xen_2 from wedge_kaxen_2_dom0 or wedge_kaxen_2_dom0_perf
+derive xen_3 from wedge_kaxen_3_dom0 or wedge_kaxen_3_dom0_perf
+
+unless xen_2==y suppress xen_2_version
+unless xen_3==y suppress xen_3_version
+

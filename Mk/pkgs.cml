@@ -1,7 +1,7 @@
 
 symbols
 
-pkgs_menu	'Package options'
+pkgs_menu	'External package options'
 afterburner_grammar 'Generate a new Afterburner grammar?'
 
 gcc_menu	'gcc options'
@@ -14,28 +14,15 @@ antlr_csharp	'Build C# support'
 antlr_java	'Build Java support'
 antlr_python	'Build Python support'
 
-pistachio_menu	'Pistachio options'
-pistachio_p3	'Pentium 3 (debug)'
-pistachio_p4	'Pentium 4 (debug)'
-pistachio_p4_perf	'Pentium 4'
-pistachio_qemu	'QEMU (debug)'
-
 menu pkgs_menu
 	antlr_menu
-	afterburner_grammar
-	pistachio_menu
 	gcc_menu
 
 menu antlr_menu
 	antlr_python
 	antlr_java
 	antlr_csharp
-
-menu pistachio_menu
-	pistachio_p3
-	pistachio_p4
-	pistachio_p4_perf
-	pistachio_qemu
+	afterburner_grammar
 
 menu gcc_menu
 	gcc
@@ -52,9 +39,4 @@ default afterburner_grammar from n
 default gcc from n
 
 require afterburner_grammar implies antlr_java
-
-default pistachio_p3 from y
-default pistachio_p4 from n
-default pistachio_p4_perf from n
-default pistachio_qemu from y
 

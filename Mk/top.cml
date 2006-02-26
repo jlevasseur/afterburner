@@ -24,7 +24,8 @@ console_serial	'Serial'
 menu main_menu
 	dir_menu
 	boot_menu
-	wedge_menu
+	l4ka_menu
+	xen_menu
 	guests_menu
 	pkgs_menu
 
@@ -61,7 +62,8 @@ default apic from n
 
 derive cml from y
 
-source "wedge.cml"
+source "xen.cml"
+source "l4ka.cml"
 source "guests.cml"
 source "pkgs.cml"
 

@@ -37,7 +37,8 @@ cmlcompile=	$(cmlpath)/cmlcompile.py
 cmlconfig=	$(cmlpath)/cmlconfigure.py
 cmlconfigtrans=	$(cmlpath)/configtrans.py
 
-cml_input=	$(addprefix $(mk_dir)/,config.cml wedge.cml guests.cml pkgs.cml)
+cml_input=	$(addprefix $(mk_dir)/,    \
+                    top.cml l4ka.cml xen.cml guests.cml pkgs.cml)
 
 cml_params ?=
 

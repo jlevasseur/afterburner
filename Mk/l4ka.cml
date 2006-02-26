@@ -1,0 +1,42 @@
+
+symbols
+
+l4ka_menu	'L4Ka environment'
+
+wedge_l4ka_passthru		'Wedge (debug) with real device access'
+wedge_l4ka_passthru_perf	'Wedge (non-debug) with real device access'
+wedge_l4ka_guest		'Wedge (debug) for guest VMs'
+
+pistachio_menu	'Pistachio options'
+pistachio_p3	'Pentium 3 (debug)'
+pistachio_p4	'Pentium 4 (debug)'
+pistachio_p4_perf	'Pentium 4'
+pistachio_qemu	'QEMU (debug)'
+
+
+menu l4ka_menu
+	wedge_l4ka_passthru
+	wedge_l4ka_passthru_perf
+	wedge_l4ka_guest
+	pistachio_menu
+
+menu pistachio_menu
+	pistachio_p3
+	pistachio_p4
+	pistachio_p4_perf
+	pistachio_qemu
+
+
+default wedge_l4ka_passthru from y
+
+default pistachio_p3 from y
+default pistachio_p4 from n
+default pistachio_p4_perf from n
+default pistachio_qemu from y
+
+derive l4ka_pistachio from wedge_l4ka_passthru or wedge_l4ka_passthru_perf
+derive marzipan from l4ka_pistachio
+derive idl4 from marzipan
+
+unless l4ka_pistachio suppress pistachio_menu
+
