@@ -12,7 +12,9 @@ $(cfg_boot_dir)/marzipan: $(cfg_build_dir)/marzipan/ia32-hypervisor
 	$(Q) mkdir -p $(cfg_boot_dir)
 	$(Q) cp $< $@
 
-$(cfg_build_dir)/marzipan/ia32-hypervisor: $(cfg_build_dir)/marzipan/config.h
+##  The sigma0 dependency ensures that the Pistachio header
+##  files and libraries are installed.
+$(cfg_build_dir)/marzipan/ia32-hypervisor: $(cfg_build_dir)/marzipan/config.h $(cfg_boot_dir)/sigma0-$(pistachio-user-type-y)
 	@echo "Building Marzipan."
 	$(Q) (cd $(cfg_build_dir)/marzipan && make -s NO_CCACHE=1 PISTACHIO_USER=$(cfg_usr_dir))
 

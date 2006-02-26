@@ -60,6 +60,7 @@ default linux_cmdline from ""
 default grub_dir from "(nd)/tftpboot/afterburn"
 default apic from n
 
+derive wedge from l4ka_wedge or xen_2_wedge or xen_3_wedge
 derive cml from y
 
 source "xen.cml"

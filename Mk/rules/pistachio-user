@@ -3,6 +3,7 @@
 
 install-$(cfg_pistachio) += install-pistachio-user
 
+.PHONY: install-pistachio-user clean-pistachio-user
 install-pistachio-user::
 clean-pistachio-user::
 

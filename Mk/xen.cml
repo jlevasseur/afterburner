@@ -36,6 +36,8 @@ default wedge_kaxen_2_dom0 from y
 
 derive xen_2 from wedge_kaxen_2_dom0 or wedge_kaxen_2_dom0_perf
 derive xen_3 from wedge_kaxen_3_dom0 or wedge_kaxen_3_dom0_perf
+derive xen_2_wedge from xen_2
+derive xen_3_wedge from xen_3
 
 unless xen_2==y suppress xen_2_version
 unless xen_3==y suppress xen_3_version
