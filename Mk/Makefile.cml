@@ -50,7 +50,7 @@ $(output_dir)/rules.out: $(cml_input)
 ##  excludes a rule for generating config.out.
 cml_config_in = $(wildcard $(output_dir)/config.out)
 ifeq ($(cml_config_in),)
-$(output_dir)/config.out:
+$(output_dir)/config.out: $(output_dir)/rules.out
 	@$(cmlconfig) -b -o $@ $(output_dir)/rules.out
 endif
 
