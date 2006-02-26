@@ -5,6 +5,7 @@ url_idl4 = http://l4ka.org/projects/idl4/$(tarball_idl4)
 patch-file_idl4 = $(afterburn_dir)/patches/idl4/idl4-$(version_idl4).patch
 
 install-$(cfg_idl4) += install-idl4
+download-$(cfg_idl4) += idl4
 
 .PHONY: install-idl4 patch-idl4 clean-idl4
 

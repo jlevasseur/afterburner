@@ -1,0 +1,25 @@
+
+gcc-version-$(cfg_gcc_3_4_4) = 3.4.4
+
+version_gcc := $(gcc-version-y)
+tarball_gcc = gcc-$(version_gcc).tar.bz2
+unpack_gcc = gcc-$(version_gcc)
+url_gcc = http://mirrors.usc.edu/pub/gnu/gcc/gcc-$(version_gcc)/$(tarball_gcc)
+
+install-$(cfg_gcc) += install-gcc
+download-$(cfg_gcc) += gcc
+
+.PHONY: install-gcc clean-gcc
+install-gcc: receipts/install-gcc-$(version_gcc)
+clean-gcc:
+	-$(Q) (cd $(cfg_build_dir) && rm -rf $(unpack_gcc))
+
+receipts/install-gcc-$(version_gcc):
+	$(Q) $(call do_unpack,gcc)
+	@echo "Building gcc."
+	$(Q) mkdir -p $(cfg_build_dir)/$(unpack_gcc) receipts $(cfg_usr_dir)
+	$(Q) (cd $(cfg_build_dir)/$(unpack_gcc) && $(cfg_src_dir)/$(unpack_gcc)/configure --prefix=$(cfg_usr_dir) --with-gnu-as --with-gnu-ld --enable-languages="c,c++")
+	$(Q) (cd $(cfg_build_dir)/$(unpack_gcc) && make -s all)
+	$(Q) (cd $(cfg_build_dir)/$(unpack_gcc) && make -s install)
+	$(Q) touch $@
+

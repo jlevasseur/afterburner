@@ -4,6 +4,7 @@ unpack_antlr = antlr-$(version_antlr)
 url_antlr = http://www.antlr.org/download/$(tarball_antlr)
 
 install-$(cfg_antlr) += install-antlr
+download-$(cfg_antlr) += antlr
 
 .PHONY: install-antlr clean-antlr
 

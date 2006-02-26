@@ -44,6 +44,9 @@ choices xen_3_version
 	xen_3_0_1
 	default xen_3_0_1
 
+default wedge_l4ka_passthru from y
+default wedge_kaxen_2_dom0 from y
+
 derive l4ka_pistachio from wedge_l4ka_passthru or wedge_l4ka_passthru_perf
 derive marzipan from l4ka_pistachio
 derive idl4 from marzipan

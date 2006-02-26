@@ -1,6 +1,6 @@
 
 install-y =
-install-n =
+download-y =
 
 cfg_common_dir :=  $(subst ",,$(cfg_common_dir))
 cfg_build_dir :=   $(subst ",,$(cfg_build_dir))
@@ -10,7 +10,7 @@ cfg_boot_dir :=    $(subst ",,$(cfg_boot_dir))
 cfg_archive_dir := $(subst ",,$(cfg_archive_dir))
 
 ifeq ($(cfg_common_dir),.)
-cfg_common_dir = $(CURDIR)
+cfg_common_dir := $(CURDIR)
 endif
 ifneq ($(cfg_common_dir),)
 cfg_build_dir := $(cfg_common_dir)/$(cfg_build_dir)
@@ -28,17 +28,26 @@ export LD_LIBRARY_PATH
 
 ##  Include in order of dependencies.
 includes-y =
+includes-$(cfg_gcc) += gcc
 includes-$(cfg_idl4) += idl4
 includes-$(cfg_antlr) += antlr
 includes-$(cfg_afterburner) += afterburner
-includes-$(cfg_xen) += xen
+includes-$(cfg_xen_2) += xen-2
+includes-$(cfg_xen_3) += xen-3
 
 include $(addprefix $(mk_dir)/rules/,$(includes-y))
 
-.PHONY: world install
+.PHONY: world install installs downloads
 world: $(install-y)
 install: $(install-y)
+installs:
+	@echo "$(install-y)"
+downloads:
+	@echo "$(foreach name,$(download-y),$(tarball_$(name)))"
 
+.PHONY: download_now
+download_now:
+	@$(foreach name,$(download-y),$(call do_retrieve,$(name));)
 
 .PHONY: dirs
 dirs:
@@ -49,11 +58,6 @@ dirs:
 	@echo "Boot:     $(cfg_boot_dir)"
 	@echo "Archives: $(cfg_archive_dir)"
 
-.PHONY: variables makefiles
-variables:
-	@echo "$(.VARIABLES)"
-makefiles:
-	@echo "$(MAKEFILE_LIST)"
 
 define do_retrieve
   if [ ! -f "$(cfg_archive_dir)/$(tarball_$1)" ] ; then \

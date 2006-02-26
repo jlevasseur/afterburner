@@ -35,6 +35,10 @@ choices linux_2_4_version
 	linux_2_4_28
 	default linux_2_4_31
 
+default linux_2_6_driver from y
+default linux_2_6_qemu from y
+default linux_2_4_driver from n
+
 derive linux_2_6 from linux_2_6_driver or linux_2_6_qemu
 derive linux_2_4 from linux_2_4_driver
 
