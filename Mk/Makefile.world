@@ -1,6 +1,8 @@
 
 install-y =
 download-y =
+patch-y =
+cvs-y =
 
 cfg_common_dir :=  $(subst ",,$(cfg_common_dir))
 cfg_build_dir :=   $(subst ",,$(cfg_build_dir))
@@ -29,6 +31,7 @@ export LD_LIBRARY_PATH
 ##  Include in order of dependencies.
 includes-y =
 includes-$(cfg_gcc) += gcc
+includes-$(cfg_pistachio) += pistachio
 includes-$(cfg_idl4) += idl4
 includes-$(cfg_antlr) += antlr
 includes-$(cfg_afterburner) += afterburner
@@ -37,17 +40,13 @@ includes-$(cfg_xen_3) += xen-3
 
 include $(addprefix $(mk_dir)/rules/,$(includes-y))
 
-.PHONY: world install installs downloads
+.PHONY: world install installs cvs
 world: $(install-y)
 install: $(install-y)
 installs:
 	@echo "$(install-y)"
-downloads:
-	@echo "$(foreach name,$(download-y),$(tarball_$(name)))"
-
-.PHONY: download_now
-download_now:
-	@$(foreach name,$(download-y),$(call do_retrieve,$(name));)
+cvs:
+	@echo "$(cvs-y)"
 
 .PHONY: dirs
 dirs:
@@ -58,14 +57,6 @@ dirs:
 	@echo "Boot:     $(cfg_boot_dir)"
 	@echo "Archives: $(cfg_archive_dir)"
 
-
-define do_retrieve
-  if [ ! -f "$(cfg_archive_dir)/$(tarball_$1)" ] ; then \
-    mkdir -p $(cfg_archive_dir) && \
-    echo "Retrieving the remote archive for $1" && \
-    trap "curl --output $(cfg_archive_dir)/$(tarball_$1) $(url_$1) && exit 0" ERR && wget -O $(cfg_archive_dir)/$(tarball_$1) $(url_$1) ; \
-  fi
-endef
 
 define do_unpack
   if [ ! -d "$(cfg_src_dir)/$(unpack_$1)" ] ; then \
@@ -82,22 +73,55 @@ untar_.bgz = -jxf
 
 untar_opts = $(untar_$(suffix $(1)))
 
-receipts/patch-%:
-	@echo "Extracting the archive $(tarball_$(name)) to apply a new patch."
-	$(Q) if [ ! -f "$(patch-file_$(name))" ] ; then \
-	  echo "Missing patch file." ; \
-	  exit 1 ; \
-	fi
-	$(Q) if [ -d $(cfg_src_dir)/$(unpack_$(name)) ] ; then \
-	  echo "$(cfg_src_dir)/$(unpack_$(name)) already exists." ; \
+#############################################################################
+#
+#  Patch logic
+#
+#############################################################################
+
+.PHONY: patches patch_now
+patches:
+	@echo "$(patch-y)"
+patch_now: $(foreach name,$(patch-y),receipts/patch-$(unpack_$(name)))
+
+define patch_template
+receipts/patch-$(unpack_$1): $(cfg_archive_dir)/$(tarball_$1) $(patch-file_$1)
+	@echo "Extracting the archive $(tarball_$1) to apply a new patch."
+	$(Q) if [ -d $(cfg_src_dir)/$(unpack_$1) ] ; then \
+	  echo "$(cfg_src_dir)/$(unpack_$1) already exists." ; \
 	  echo "Please remove it first." ; \
 	  exit 1 ; \
         fi
-	$(Q) $(call do_retrieve,$(name))
-	$(Q) mkdir -p $(cfg_src_dir)/$(unpack_$(name)) receipts
-	$(Q) (cd $(cfg_src_dir)/$(unpack_$(name)) && tar --strip-components=1 $(call untar_opts,$(tarball_$(name))) $(cfg_archive_dir)/$(tarball_$(name)))
+	$(Q) mkdir -p $(cfg_src_dir)/$(unpack_$1) receipts
+	$(Q) (cd $(cfg_src_dir)/$(unpack_$1) && tar --strip-components=1 $(call untar_opts,$(tarball_$1)) $(cfg_archive_dir)/$(tarball_$1))
 	@echo "Applying the patch."
-	$(Q) (cd $(cfg_src_dir)/$(unpack_$(name)) && patch -Np1 < $(patch-file_$(name)))
-	$(Q) touch receipts/patch-$(unpack_$(name))
-	@echo "The newly patched project: $(cfg_src_dir)/$(unpack_$(name))"
+	$(Q) (cd $(cfg_src_dir)/$(unpack_$1) && patch -Np1 < $(patch-file_$1))
+	$(Q) touch $$@
+	@echo "The newly patched project: $(cfg_src_dir)/$(unpack_$1)"
+endef
+
+##  Instantiate the patch_template for each patch.
+$(foreach name,$(patch-y),$(eval $(call patch_template,$(name))))
+
+#############################################################################
+#
+#  Download logic
+#
+#############################################################################
+
+.PHONY: downloads download_now
+downloads:
+	@echo "$(foreach name,$(download-y),$(tarball_$(name)))"
+download_now: $(foreach name,$(download-y),$(cfg_archive_dir)/$(tarball_$(name)))
+
+define retrieve_template
+$(cfg_archive_dir)/$(tarball_$1):
+	@echo "Retrieving $$@"
+	$(Q) mkdir -p $(cfg_archive_dir)
+	$(Q) trap "curl --output $$@ $(url_$1) && exit 0" ERR && wget -O $$@ $(url_$1)
+endef
+
+##  Instantiate the retrieve_template for each archive.
+$(foreach name,$(download-y),$(eval $(call retrieve_template,$(name))))
+
 

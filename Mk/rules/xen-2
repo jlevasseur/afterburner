@@ -11,6 +11,7 @@ patch-file_xen-2 = $(afterburn_dir)/patches/xen/xen-$(version_xen-2)-afterburn.p
 
 install-$(cfg_xen_2) += install-xen-2
 download-$(cfg_xen_2) += xen-2
+patch-$(cfg_xen_2) += xen-2
 
 .PHONY: install-xen-2 patch-xen-2 clean-xen-2
 

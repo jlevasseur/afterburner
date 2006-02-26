@@ -23,10 +23,10 @@ console_serial	'Serial'
 
 menu main_menu
 	dir_menu
-	boot_menu
 	l4ka_menu
 	xen_menu
 	guests_menu
+	boot_menu
 	pkgs_menu
 
 menu dir_menu

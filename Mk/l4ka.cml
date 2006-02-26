@@ -34,9 +34,9 @@ default pistachio_p4 from n
 default pistachio_p4_perf from n
 default pistachio_qemu from y
 
-derive l4ka_pistachio from wedge_l4ka_passthru or wedge_l4ka_passthru_perf
-derive marzipan from l4ka_pistachio
+derive marzipan from wedge_l4ka_passthru or wedge_l4ka_passthru_perf
+derive pistachio from marzipan
 derive idl4 from marzipan
 
-unless l4ka_pistachio suppress pistachio_menu
+unless pistachio suppress pistachio_menu
 
