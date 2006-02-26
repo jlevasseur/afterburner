@@ -22,7 +22,7 @@ antlr_opts += $(antlr-csharp-$(cfg_antlr_csharp))
 antlr_opts += $(antlr-python-$(cfg_antlr_python)) 
 antlr_opts += $(antlr-java-$(cfg_antlr_java)) 
 
-receipts/install-antlr-$(version_antlr):
+receipts/install-antlr-$(version_antlr): $(cfg_archive_dir)/$(tarball_antlr)
 	$(Q) $(call do_unpack,antlr)
 	@echo "Building Antlr."
 	$(Q) mkdir -p $(cfg_build_dir)/$(unpack_antlr)

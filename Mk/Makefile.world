@@ -32,6 +32,7 @@ export LD_LIBRARY_PATH
 includes-y =
 includes-$(cfg_gcc) += gcc
 includes-$(cfg_pistachio) += pistachio
+includes-$(cfg_pistachio) += pistachio-user
 includes-$(cfg_idl4) += idl4
 includes-$(cfg_antlr) += antlr
 includes-$(cfg_afterburner) += afterburner
@@ -60,7 +61,6 @@ dirs:
 
 define do_unpack
   if [ ! -d "$(cfg_src_dir)/$(unpack_$1)" ] ; then \
-    $(call do_retrieve,$1) && \
     mkdir -p $(cfg_src_dir)/$(unpack_$1) && \
     (cd $(cfg_src_dir)/$(unpack_$1) && tar --strip-components=1 $(call untar_opts,$(tarball_$1)) $(cfg_archive_dir)/$(tarball_$1)) ; \
   fi
