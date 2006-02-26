@@ -1,0 +1,39 @@
+
+install-$(cfg_marzipan) += install-marzipan
+cvs-$(cfg_marzipan) += marzipan
+
+.PHONY: install-marzipan clean-marzipan
+
+install-marzipan: $(cfg_boot_dir)/marzipan
+clean-marzipan:
+	-$(Q) (cd $(cfg_build_dir)/marzipan && make -s clean)
+
+$(cfg_boot_dir)/marzipan: $(cfg_build_dir)/marzipan/ia32-hypervisor
+	$(Q) mkdir -p $(cfg_boot_dir)
+	$(Q) cp $< $@
+
+$(cfg_build_dir)/marzipan/ia32-hypervisor: $(cfg_build_dir)/marzipan/config.h
+	@echo "Building Marzipan."
+	$(Q) (cd $(cfg_build_dir)/marzipan && make -s NO_CCACHE=1 PISTACHIO_USER=$(cfg_usr_dir))
+
+$(cfg_build_dir)/marzipan/config.h: receipts/cvs-marzipan
+	$(Q) mkdir -p $(cfg_build_dir)
+	$(Q) (cd $(cfg_src_dir)/$(marzipan_cvs)/$(resourcemon_cvs) && make BUILDDIR=$(cfg_build_dir)/marzipan)
+	$(Q) echo "#define CONFIG_PERFMON" >> $(cfg_build_dir)/marzipan/config.h
+	$(Q) echo "#define CONFIG_VGA_PASSTHROUGH" >> $(cfg_build_dir)/marzipan/config.h
+
+######################################################################
+#
+#  Logic to retrieve Marzipan from CVS.
+#
+######################################################################
+l4ka_cvs_root = i30cvs:/home/cvs
+marzipan_cvs = vm
+resourcemon_cvs = hypervisor
+receipts/cvs-marzipan:
+	@echo "Retrieving Marzipan from CVS."
+	$(Q) mkdir -p $(cfg_src_dir) receipts
+	$(Q) (cd $(cfg_src_dir) && cvs -Q -d $(l4ka_cvs_root) co $(marzipan_cvs)/$(resourcemon_cvs))
+	$(Q) (cd $(cfg_src_dir) && cvs -Q -d $(l4ka_cvs_root) co $(marzipan_cvs)/interfaces)
+	$(Q) touch $@
+

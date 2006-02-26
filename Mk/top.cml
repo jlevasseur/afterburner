@@ -43,11 +43,11 @@ choices console_type
 	default console_serial
 
 menu boot_menu
-	apic
 	grub_dir$
 	console_type
 	vmsize%
 	linux_cmdline$
+	apic
 
 default common_dir from "."
 default build_dir from "build"
