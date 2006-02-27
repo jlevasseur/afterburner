@@ -1,0 +1,24 @@
+version_qemu = 0.7.0
+tarball_qemu = qemu-$(version_qemu).tar.gz
+unpack_qemu = qemu-$(version_qemu)
+url_qemu = http://fabrice.bellard.free.fr/qemu/$(tarball_qemu)
+patch-file_qemu = $(afterburn_dir)/patches/qemu/qemu-$(version_qemu).patch
+
+install-$(cfg_qemu) += install-qemu
+download-$(cfg_qemu) += qemu
+patch-$(cfg_qemu) += qemu
+
+.PHONY: install-qemu clean-qemu
+
+install-qemu: receipts/install-$(unpack_qemu)
+clean-qemu:
+	-$(Q) (cd $(cfg_src_dir)/$(unpack_qemu) && make clean)
+
+receipts/install-$(unpack_qemu): receipts/patch-$(unpack_qemu)
+	$(Q) mkdir -p $(cfg_usr_dir) receipts
+	$(Q) (cd $(cfg_src_dir)/$(unpack_qemu) && ./configure --prefix=$(cfg_usr_dir) --target-list=i386-softmmu)
+	$(Q) (cd $(cfg_src_dir)/$(unpack_qemu) && make -s)
+	$(Q) (cd $(cfg_src_dir)/$(unpack_qemu) && make -s install)
+	$(Q) touch $@
+
+

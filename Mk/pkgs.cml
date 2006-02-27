@@ -8,6 +8,7 @@ gcc_menu	'gcc options'
 gcc		'Build gcc?'
 gcc_version	'gcc version'
 gcc_3_4_4	'3.4.4'
+qemu		'Build QEMU?'
 
 antlr_menu	'Antlr options'
 antlr_csharp	'Build C# support'
@@ -17,6 +18,7 @@ antlr_python	'Build Python support'
 menu pkgs_menu
 	antlr_menu
 	gcc_menu
+	qemu
 
 menu antlr_menu
 	antlr_python
@@ -37,6 +39,7 @@ default antlr_java from n
 default antlr_python from n
 default afterburner_grammar from n
 default gcc from n
+default qemu from y
 
 require afterburner_grammar implies antlr_java
 

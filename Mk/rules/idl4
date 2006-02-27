@@ -13,8 +13,6 @@ patch-$(cfg_idl4) += idl4
 install-idl4: receipts/install-idl4-$(version_idl4)
 patch-idl4: receipts/patch-idl4-$(version_idl4)
 
-receipts/patch-idl4-$(version_idl4): name=idl4
-receipts/patch-idl4-$(version_idl4): $(patch-file_idl4)
 
 ifeq ($(host_platform),Darwin)
 idl4_env = env CC="cc -no-cpp-precomp"

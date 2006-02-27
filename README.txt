@@ -3,7 +3,7 @@
 
 We offer a 'make world' script that retrieves nearly everything from
 the Internet, creates harmonious configurations, and then builds everything.
-The build process will generate many side products, and thus you should 
+The build process generates many side products, and thus you should 
 build within a dedicated directory (and not within the Afterburner directory).
 
 To build, change into your dedicated build directory, and execute:
@@ -16,6 +16,16 @@ specify the build components and their versions, then you must
 run 'make menuconfig' and tailor the configuration to your preferences.
 The default configuration will build components that have been under test
 for over a year, and thus are fairly old.
+
+Other commands:
+  make downloads
+    - Lists the files that we retrieve from the Internet.
+  make download_now
+    - Retrieve the files from the Internet immediately.
+  make cvs
+    - Lists the CVS repositories that we retrieve from the Internet.
+  make cvs_now
+    - Retrieve the CVS repositories from the Internet now.
 
 
 [ Running ]

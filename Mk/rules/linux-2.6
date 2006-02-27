@@ -1,0 +1,78 @@
+
+linux-2.6-version-$(cfg_linux_2_6_9) = 2.6.9
+linux-2.6-version-$(cfg_linux_2_6_12.3) = 2.6.12.3
+linux-2.6-version-$(cfg_linux_2_6_12.6) = 2.6.12.6
+
+version_linux-2.6 := $(linux-2.6-version-y)
+tarball_linux-2.6 = linux-$(version_linux-2.6).tar.bz2
+url_linux-2.6 = http://www.kernel.org/pub/linux/kernel/v2.6/$(tarball_linux-2.6)
+unpack_linux-2.6 = linux-$(version_linux-2.6)
+patch-file_linux-2.6 = $(afterburn_dir)/patches/linux/linux-$(version_linux-2.6)-big-afterburn.patch
+
+install-$(cfg_linux_2_6) += install-linux-2.6
+download-$(cfg_linux_2_6) += linux-2.6
+patch-$(cfg_linux_2_6) += linux-2.6
+
+.PHONY: install-linux-2.6 clean-linux-2.6 patch-linux-2.6
+
+install-linux-2.6::
+clean-linux-2.6::
+patch-linux-2.6: receipts/patch-$(unpack_linux-2.6)
+
+
+linux-2.6-opts = INSTALL_MOD_PATH=$(cfg_usr_dir)
+
+######################################################################
+#  The Linux template
+######################################################################
+define linux-2.6-template
+# Parameter $1: Linux configuration name
+# Parameter $2: Linux build directory
+
+.PHONY: install-linux-2.6-$1 clean-linux-2.6-$1 reconfig-linux-2.6-$1
+install-linux-2.6:: install-linux-2.6-$1
+clean-linux-2.6:: clean-linux-2.6-$1
+
+reconfig-linux-2.6-$1: $2/.config
+	$(Q) (cd $(cfg_src_dir)/$(unpack_linux-2.6) && make O=$2 $(linux-2.6-opts) menuconfig)
+
+install-linux-2.6-$1: \
+  $(cfg_boot_dir)/vmlinuz-$(version_linux-2.6)-$1 \
+  $(cfg_boot_dir)/bzImage-$(version_linux-2.6)-$1
+
+clean-linux-2.6-$1:
+	-$(Q) (cd $(cfg_build_dir)/$(unpack_linux-2.6)-$1 && make clean)
+
+$(cfg_boot_dir)/vmlinuz-$(version_linux-2.6)-$1: $2/vmlinuz
+	$(Q) mkdir -p $(cfg_boot_dir)
+	$(Q) cp $$< $$@
+
+$(cfg_boot_dir)/bzImage-$(version_linux-2.6)-$1: $2/arch/i386/boot/bzImage
+	$(Q) mkdir -p $(cfg_boot_dir)
+	$(Q) cp $$< $$@
+
+$2/vmlinuz: $2/vmlinux
+	$(Q) strip -o $$(<D)/vmlinux.stripped $$(<D)/vmlinux
+	$(Q) gzip -fc $$(<D)/vmlinux.stripped > $$(<D)/vmlinuz
+
+$2/vmlinux $2/arch/i386/boot/bzImage: $2/.config receipts/patch-$(unpack_linux-2.6)
+	@echo "Building Linux 2.6 in $2"
+	$(Q) mkdir -p $(cfg_usr_dir)
+	$(Q) (cd $(cfg_src_dir)/$(unpack_linux-2.6) && make O=$2 $(linux-2.6-opts))
+	$(Q) if grep CONFIG_MODULES=y $2/.config ; then cd $(cfg_src_dir)/$(unpack_linux-2.6) && make O=$2 $(linux-2.6-opts) modules_install ; fi
+
+
+$2/.config: $(afterburn_dir)/afterburn-wedge/doc/linux-2.6/dot-config-$(version_linux-2.6)-$1
+	$(Q) mkdir -p $$(@D)
+	$(Q) cat $$< | sed -e '{ s/CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION="-$1"/g ; }' > $$@
+
+endef
+
+##  Which configurations of Linux do we build?
+linux-2.6-y =
+linux-2.6-$(cfg_linux_2_6_driver) += driver
+linux-2.6-$(cfg_linux_2_6_qemu) += qemu
+
+##  Instantiate the linux-2.6-template for each Linux configuration.
+$(foreach name,$(linux-2.6-y),$(eval $(call linux-2.6-template,$(name),$(cfg_build_dir)/$(unpack_linux-2.6)-$(name))))
+

@@ -2,8 +2,8 @@
 #
 # Copyright (C) 2005, University of Karlsruhe
 #
-# File path:     afterburn-wedge/Mk/config/Makefile
-# Description:   Process configuration files.
+# File path:     Mk/Makefile.cml
+# Description:   Run the CML configuration engine.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -26,11 +26,7 @@
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
 #
-# $Id: Makefile,v 1.4 2005/07/14 15:11:22 joshua Exp $
-#
 ######################################################################
-
-output_dir	?= .
 
 cmlpath=	$(afterburn_dir)/afterburn-wedge/contrib/cml2
 cmlcompile=	$(cmlpath)/cmlcompile.py
@@ -42,28 +38,27 @@ cml_input=	$(addprefix $(mk_dir)/,    \
 
 cml_params ?=
 
-$(output_dir)/rules.out: $(cml_input)
+rules.out: $(cml_input)
 	@$(cmlcompile) -o $@ $<
 
 
 ##  Auto generate the config.out only if it doesn't exist.  Since the Makefile
 ##  includes the config.out, we have to ensure that the normal case
 ##  excludes a rule for generating config.out.
-cml_config_in = $(wildcard $(output_dir)/config.out)
+cml_config_in = $(wildcard config.out)
 ifeq ($(cml_config_in),)
-$(output_dir)/config.out: $(output_dir)/rules.out
-	@$(cmlconfig) -b -o $@ $(output_dir)/rules.out
+config.out: rules.out
+	@$(cmlconfig) -b -o $@ rules.out
 endif
 
 
 .PHONY: cml-run
-cml-run: $(output_dir)/rules.out
-	@$(cmlconfig) $(cml_type) -o $(output_dir)/config.out \
-	    -i $(output_dir)/config.out \
-	    $(addprefix -D,$(cml_params)) $(output_dir)/rules.out
+cml-run: rules.out
+	@$(cmlconfig) $(cml_type) -o config.out -i config.out \
+	    $(addprefix -D,$(cml_params)) rules.out
 
-$(output_dir)/config.h: $(output_dir)/config.out
-	@$(cmlconfigtrans) -h $(output_dir)/config.h -s $(output_dir)/.config $<
+config.h: config.out
+	@$(cmlconfigtrans) -h config.h -s .config $<
 
 
 .PHONY: batchconfig ttyconfig menuconfig xconfig

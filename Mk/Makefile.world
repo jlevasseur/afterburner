@@ -40,6 +40,8 @@ includes-$(cfg_marzipan) += marzipan
 includes-$(cfg_xen_2) += xen-2
 includes-$(cfg_xen_3) += xen-3
 includes-$(cfg_wedge) += wedge
+includes-$(cfg_linux_2_6) += linux-2.6
+includes-$(cfg_qemu) += qemu
 
 include $(addprefix $(mk_dir)/rules/,$(includes-y))
 
