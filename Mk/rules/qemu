@@ -4,11 +4,14 @@ unpack_qemu = qemu-$(version_qemu)
 url_qemu = http://fabrice.bellard.free.fr/qemu/$(tarball_qemu)
 patch-file_qemu = $(afterburn_dir)/patches/qemu/qemu-$(version_qemu).patch
 
+tarball_qemu-floppy = qemu-afterburner-floppy.img.gz
+url_qemu-floppy = http://l4ka.org/download/tools/$(tarball_qemu-floppy)
+
 install-$(cfg_qemu) += install-qemu
-download-$(cfg_qemu) += qemu
+download-$(cfg_qemu) += qemu qemu-floppy
 patch-$(cfg_qemu) += qemu
 
-.PHONY: install-qemu clean-qemu
+.PHONY: install-qemu clean-qemu run-qemu
 
 install-qemu: receipts/install-$(unpack_qemu)
 clean-qemu:
@@ -21,4 +24,11 @@ receipts/install-$(unpack_qemu): receipts/patch-$(unpack_qemu)
 	$(Q) (cd $(cfg_src_dir)/$(unpack_qemu) && make -s install)
 	$(Q) touch $@
 
+
+run-qemu: $(cfg_boot_dir)/qemu-afterburner-floppy.img receipts/install-$(unpack_qemu) $(cfg_boot_dir)/menu.lst
+	$(Q) (cd $(cfg_boot_dir) && qemu -nographic -pci -user-net -m 196 -tftp /tftpboot -fda $(cfg_boot_dir)/qemu-afterburner-floppy.img -boot a -redir tcp:3022:10.0.2.10:22)
+
+
+$(cfg_boot_dir)/qemu-afterburner-floppy.img: $(cfg_archive_dir)/qemu-afterburner-floppy.img.gz
+	$(Q) gzip -cd $< > $@
 
