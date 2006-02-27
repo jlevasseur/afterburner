@@ -16,7 +16,7 @@ archive_dir	'Archives and tar balls'
 vmsize		'Virtual machine memory size (kB)'
 linux_cmdline	'Linux command line'
 grub_dir	'Directory used within the GRUB menu.lst'
-apic		'Build APIC support?'
+#apic		'Build APIC support?'
 console_type	'Boot console type'
 console_vga	'VGA'
 console_serial	'Serial'
@@ -47,7 +47,7 @@ menu boot_menu
 	console_type
 	vmsize%
 	linux_cmdline$
-	apic
+#	apic
 
 default common_dir from "."
 default build_dir from "build"
@@ -58,7 +58,7 @@ default archive_dir from "archives"
 default vmsize from 65536
 default linux_cmdline from ""
 default grub_dir from "(nd)/tftpboot/afterburn"
-default apic from n
+#default apic from n
 
 derive wedge from l4ka_wedge or xen_2_wedge or xen_3_wedge
 derive grub from y

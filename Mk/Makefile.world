@@ -41,6 +41,7 @@ includes-$(cfg_xen_2) += xen-2
 includes-$(cfg_xen_3) += xen-3
 includes-$(cfg_wedge) += wedge
 includes-$(cfg_linux_2_6) += linux-2.6
+includes-$(cfg_linux_2_4) += linux-2.4
 includes-$(cfg_grub) += grub
 includes-$(cfg_qemu) += qemu
 
@@ -53,6 +54,7 @@ installs:
 	@echo "$(install-y)"
 cvs:
 	@echo "$(cvs-y)"
+cvs_now: $(addprefix receipts/cvs-,$(cvs-y))
 
 .PHONY: dirs
 dirs:

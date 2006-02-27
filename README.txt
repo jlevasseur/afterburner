@@ -7,7 +7,7 @@ The build process generates many side products, and thus you should
 build within a dedicated directory (and not within the Afterburner directory).
 
 To build, change into your dedicated build directory, and execute:
-make -f path/to/afterburner/Makefile cache
+make -f path/to/afterburner/Makefile
 make menuconfig
 make world
 

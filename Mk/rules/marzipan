@@ -29,9 +29,14 @@ $(cfg_build_dir)/marzipan/config.h: receipts/cvs-marzipan
 #  Logic to retrieve Marzipan from CVS.
 #
 ######################################################################
-l4ka_cvs_root = i30cvs:/home/cvs
+ifeq ($(findstring l4ka.org,$(l4ka_cvs_root)),)
 marzipan_cvs = vm
 resourcemon_cvs = hypervisor
+else
+marzipan_cvs = marzipan
+resourcemon_cvs = resourcemon
+endif
+
 receipts/cvs-marzipan:
 	@echo "Retrieving Marzipan from CVS."
 	$(Q) mkdir -p $(cfg_src_dir) receipts
